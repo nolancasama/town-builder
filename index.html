@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#8ecae6" />
+    <title>Matsubara Town — Speak &amp; Build</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="loading-inner">
+        <div class="loading-town">🏘️</div>
+        <div class="loading-title">Matsubara</div>
+        <div class="loading-bar"><span id="loading-fill"></span></div>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="progress-panel">
+        <div id="progress-label">Town Progress: <b><span id="progress-count">0</span> / <span id="progress-total">8</span></b></div>
+        <div id="progress-icons"></div>
+      </div>
+
+      <div id="top-right">
+        <button id="mute-btn" class="icon-btn" title="Sound on / off" aria-label="Sound on or off">
+          <span id="mute-icon">🔊</span>
+        </button>
+        <button id="settings-btn" class="icon-btn" title="Teacher settings" aria-label="Teacher settings">⚙️</button>
+        <div id="settings-panel" class="hidden">
+          <button id="btn-reset-unlocks" class="settings-row" type="button">
+            <span class="settings-row-label">Reset building unlocks</span>
+            <small>建物のアンロックをリセット</small>
+            <span id="reset-confirm" class="reset-confirm-label">Tap again to confirm</span>
+          </button>
+          <button id="btn-reset-cancel" class="settings-row ghost" type="button">Close</button>
+        </div>
+      </div>
+
+      <div id="choice-panel" class="hidden">
+        <div id="choice-title">What should we build?</div>
+        <div id="choice-cards"></div>
+        <div id="mystery-hint">
+          Finish a town to unlock new places!
+          <small>町を完成させると、新しい場所がアンロックされるよ！</small>
+        </div>
+      </div>
+
+      <div id="speech-panel">
+        <div id="target-card">
+          <div id="target-hint">Say:</div>
+          <div id="target-sentence">We have a school in Matsubara.</div>
+        </div>
+        <div id="mic-row">
+          <button id="mic-btn" aria-label="Press and speak">
+            <span class="mic-glyph">🎙️</span>
+            <span class="mic-ring"></span>
+          </button>
+        </div>
+        <div id="mic-status">Press and speak</div>
+        <div id="heard"></div>
+        <button id="choice-back" class="ghost-btn">↩ Choose something else</button>
+        <button id="type-toggle" class="ghost-btn hidden">⌨️ Type it instead</button>
+        <form id="type-form" class="hidden" autocomplete="off">
+          <input id="type-input" type="text" placeholder="Type the sentence…" />
+          <button type="submit">Build</button>
+        </form>
+      </div>
+    </div>
+
+      <!-- Speaking tour: "We can ___ in the ___." -->
+      <div id="tour-panel" class="hidden">
+        <div id="tour-card">
+          <div id="tour-place">STADIUM</div>
+          <div id="tour-frame"></div>
+          <div id="tour-jp">ここでできることを英語で言ってみよう。</div>
+          <div id="tour-jp-hint"></div>
+          <div id="tour-hints" class="hidden"></div>
+        </div>
+        <div id="tour-controls">
+          <button id="tour-mic" class="mic-button" aria-label="Press and speak">
+            <span class="mic-glyph">🎙️</span>
+            <span class="mic-ring"></span>
+          </button>
+          <button id="tour-skip" class="skip-btn">Skip<small>スキップ</small></button>
+        </div>
+        <div id="tour-status">Press and speak</div>
+        <div id="tour-heard"></div>
+      </div>
+
+      <div id="tour-counter" class="hidden">
+        <span id="tour-count">1 / 10</span>
+        <span id="tour-counter-label">Speaking Tour</span>
+      </div>
+
+      <!-- Phase 3: the guide speaks with the student's own recorded voice -->
+      <div id="tour-subtitle" class="hidden">
+        <span id="subtitle-speaker">YOUR GUIDE</span>
+        <span id="subtitle-text"></span>
+      </div>
+
+    <!-- Landmark name card (explore mode) -->
+    <div id="landmark-card" class="hidden">
+      <div id="landmark-name">STADIUM</div>
+      <div id="landmark-sentence">We have a stadium in Matsubara.</div>
+    </div>
+
+    <!-- Speaking tour summary -->
+    <div id="tour-summary" class="hidden">
+      <div id="tour-summary-inner">
+        <div id="summary-title">すべての場所を見ました！</div>
+        <div id="summary-en">You visited every place!</div>
+        <div id="summary-score">0 / 0 places spoken</div>
+        <div id="summary-buttons">
+          <button id="btn-continue" class="big-btn">Continue<small>まだ言っていない場所をつづける</small></button>
+          <button id="btn-finish" class="big-btn primary">Guided Tour<small>ガイドツアーへ</small></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- End of the guided tour -->
+    <div id="tour-end" class="hidden">
+      <div id="tour-end-inner">
+        <div id="tour-end-title">Great tour!</div>
+        <div id="tour-end-jp">すばらしいツアーでした！</div>
+        <div id="tour-end-score"></div>
+        <div id="tour-end-buttons">
+          <button id="btn-end-explore" class="big-btn primary">Explore Town<small>まちを見る</small></button>
+          <button id="btn-end-again" class="big-btn">Play Again<small>もういちど</small></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Building unlock reveal: a discovery, not a score -->
+    <div id="unlock-reveal" class="hidden">
+      <div id="unlock-stage">
+        <span id="unlock-lock">🔒</span>
+      </div>
+      <div id="unlock-titles">
+        <div id="unlock-kicker">NEW PLACE UNLOCKED!</div>
+        <div id="unlock-name">???</div>
+        <div id="unlock-jp">新しい場所がアンロックされました！</div>
+        <div id="unlock-tap-hint">tap to continue</div>
+      </div>
+    </div>
+
+    <!-- Finale -->
+    <div id="finale" class="hidden">
+      <div id="finale-inner">
+        <div id="finale-title">Our town is complete!</div>
+        <div id="finale-sub">You built 10 places with your English.</div>
+        <div id="finale-buttons">
+          <button id="btn-tour" class="big-btn primary">Speaking Tour<small>話してみよう</small></button>
+          <button id="btn-explore" class="big-btn">Explore Town</button>
+          <button id="btn-again" class="big-btn">Play Again</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="explore-banner" class="hidden">
+      <span id="explore-message">Explore Town — tap a building</span>
+      <button id="btn-replay" class="ghost-btn">Play Again</button>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
