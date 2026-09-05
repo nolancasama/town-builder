@@ -17,10 +17,19 @@ export class Occupancy {
     this.graph = graph;
   }
 
-  /** Reserve an axis-aligned area (rotation is snapped to the nearest quarter). */
+  /**
+   * Reserve an area at its real angle. This used to snap `rot` to the nearest
+   * quarter turn and keep an axis-aligned box, but most landmark lots sit at
+   * arbitrary angles, so the box both covered open pavement the building was
+   * nowhere near and missed the corners it actually occupied. Walkers who
+   * stepped into the falsely reserved ground were turned around, walked back in,
+   * and stalled in front of the building.
+   */
   addRect(x, z, w, d, rot = 0) {
-    const swap = Math.abs(Math.round(rot / (Math.PI / 2))) % 2 === 1;
-    this.rects.push({ x, z, hw: (swap ? d : w) / 2, hd: (swap ? w : d) / 2 });
+    this.rects.push({
+      x, z, hw: w / 2, hd: d / 2,
+      cos: Math.cos(-rot), sin: Math.sin(-rot),
+    });
   }
 
   add(x, z, r) {
@@ -30,8 +39,13 @@ export class Occupancy {
   /** Circle-vs-reserved-rectangle test shared by placement and moving agents. */
   overlapsReserved(x, z, r = 0) {
     for (const it of this.rects) {
-      const dx = Math.abs(x - it.x) - it.hw;
-      const dz = Math.abs(z - it.z) - it.hd;
+      // into the rectangle's own frame, so the test stays a cheap AABB check
+      const ox = x - it.x;
+      const oz = z - it.z;
+      const lx = ox * it.cos - oz * it.sin;
+      const lz = ox * it.sin + oz * it.cos;
+      const dx = Math.abs(lx) - it.hw;
+      const dz = Math.abs(lz) - it.hd;
       if (dx < r && dz < r) {
         if (dx < 0 || dz < 0) return true;
         if (dx * dx + dz * dz < r * r) return true;

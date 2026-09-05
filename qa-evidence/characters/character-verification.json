@@ -1,6 +1,6 @@
 {
   "mode": "normal",
-  "url": "http://127.0.0.1:64465/?dev=1&skipIntro=1&target=1",
+  "url": "http://127.0.0.1:65034/?dev=1&skipIntro=1&target=1",
   "assertions": [
     {
       "message": "game reaches the choosing phase",
@@ -41,8 +41,8 @@
         "visiblePeople": 6,
         "visibleSkinnedPedestrians": 6,
         "visibleProceduralPedestrians": 0,
-        "touristCount": 7,
-        "skinnedTourists": 7,
+        "touristCount": 5,
+        "skinnedTourists": 5,
         "guide": {
           "skinned": true,
           "markedAsGuide": true,
@@ -72,8 +72,8 @@
         "visiblePeople": 6,
         "visibleSkinnedPedestrians": 6,
         "visibleProceduralPedestrians": 0,
-        "touristCount": 7,
-        "skinnedTourists": 7,
+        "touristCount": 5,
+        "skinnedTourists": 5,
         "guide": {
           "skinned": true,
           "markedAsGuide": true,
@@ -138,27 +138,27 @@
       "pass": true,
       "detail": {
         "min": [
-          83.85478782288953,
-          0.29999999999999993,
-          54.97784795199031
+          55.2760458942449,
+          0.30000000000000004,
+          42.992523327286136
         ],
         "max": [
-          84.62421073698263,
-          2.2616363932415844,
-          56.170805428651654
+          56.399357175227046,
+          2.195587647185661,
+          43.55417892645225
         ],
-        "height": 1.9616363932415846
+        "height": 1.8955876471856608
       }
     },
     {
       "message": "ambient pedestrian feet sit on the surface it is standing on",
       "pass": true,
       "detail": {
-        "groundedGap": -5.551115123125783e-17,
+        "groundedGap": 5.551115123125783e-17,
         "position": [
-          84.25353114991475,
+          55.83770153473597,
           0.3,
-          55.59847340723838
+          43.273351126869194
         ]
       }
     },
@@ -214,16 +214,16 @@
         "headBone": "head",
         "bounds": {
           "min": [
-            -2.7758188365573364,
+            -2.800027614519246,
             0.29999999999999993,
-            -0.9712005774871533
+            -0.9889088075996642
           ],
           "max": [
-            -1.6241811634426644,
-            2.283813451214716,
-            -0.3041398567180548
+            -1.5999723854807535,
+            2.3672174800125534,
+            -0.2938033371940181
           ],
-          "height": 1.9838134512147163
+          "height": 2.0672174800125536
         }
       }
     },
@@ -242,16 +242,16 @@
       "pass": true,
       "detail": {
         "min": [
-          -2.7758188365573364,
+          -2.800027614519246,
           0.29999999999999993,
-          -0.9712005774871533
+          -0.9889088075996642
         ],
         "max": [
-          -1.6241811634426644,
-          2.283813451214716,
-          -0.3041398567180548
+          -1.5999723854807535,
+          2.3672174800125534,
+          -0.2938033371940181
         ],
-        "height": 1.9838134512147163
+        "height": 2.0672174800125536
       }
     },
     {
@@ -259,16 +259,16 @@
       "pass": true,
       "detail": {
         "min": [
-          -2.7758188365573364,
+          -2.800027614519246,
           0.29999999999999993,
-          -0.9712005774871533
+          -0.9889088075996642
         ],
         "max": [
-          -1.6241811634426644,
-          2.283813451214716,
-          -0.3041398567180548
+          -1.5999723854807535,
+          2.3672174800125534,
+          -0.2938033371940181
         ],
-        "height": 1.9838134512147163
+        "height": 2.0672174800125536
       }
     },
     {
@@ -276,12 +276,12 @@
       "pass": true,
       "detail": {
         "before": {
-          "scaleY": 10.673195387280767,
-          "y": 3.5568317957602544
+          "scaleY": 10.356652682073832,
+          "y": 3.4513175606912774
         },
         "after": {
-          "scaleY": 44.82195069446903,
-          "y": 3.5424341019763035,
+          "scaleY": 43.49263355834812,
+          "y": 3.4369198669073264,
           "mouthLevel": 0.8498718768861688
         }
       }
@@ -298,12 +298,12 @@
         "skinned": true,
         "head": "head",
         "headQuaternion": [
-          -0.032195130767011554,
-          -0.2894874836238947,
-          0.010629779795996629,
-          0.9565811403960925
+          -0.03222042030261872,
+          -0.2894836751105374,
+          0.010743183761024547,
+          0.9565801745607612
         ],
-        "bodyRotationY": -0.8299482760347561
+        "bodyRotationY": -0.8270262215639921
       }
     },
     {
@@ -314,24 +314,24 @@
           "skinned": true,
           "head": "head",
           "headQuaternion": [
-            -0.032195130767011554,
-            -0.2894874836238947,
-            0.010629779795996629,
-            0.9565811403960925
+            -0.03222042030261872,
+            -0.2894836751105374,
+            0.010743183761024547,
+            0.9565801745607612
           ],
-          "bodyRotationY": -0.8299482760347561
+          "bodyRotationY": -0.8270262215639921
         },
         "after": {
           "headQuaternion": [
-            -0.032815018844923466,
-            -0.25668231488713694,
-            0.011106329780103771,
-            0.9658747399125849
+            -0.032603549917645525,
+            -0.2555770417481051,
+            0.011098710485774124,
+            0.9661750373972657
           ],
-          "bodyRotationY": -1.2946265435248336,
+          "bodyRotationY": -1.2890324954266996,
           "animation": "idle"
         },
-        "headQuaternionDelta": 0.03280516873675776
+        "headQuaternionDelta": 0.033906633362432326
       }
     },
     {
@@ -363,7 +363,7 @@
   "server": {
     "kind": "static-dist",
     "root": "dist",
-    "base": "http://127.0.0.1:64465"
+    "base": "http://127.0.0.1:65034"
   },
   "startup": {
     "phase": "choosing",
@@ -371,8 +371,8 @@
     "visiblePeople": 6,
     "visibleSkinnedPedestrians": 6,
     "visibleProceduralPedestrians": 0,
-    "touristCount": 7,
-    "skinnedTourists": 7,
+    "touristCount": 5,
+    "skinnedTourists": 5,
     "guide": {
       "skinned": true,
       "markedAsGuide": true,
@@ -439,13 +439,13 @@
         ]
       },
       "position": [
-        83.51030723431982,
+        55.83770153473597,
         0.3,
-        55.36978912551687
+        42.246552171913905
       ],
       "animation": "walk",
       "motionState": "walking",
-      "model": "i"
+      "model": "k"
     },
     "after": {
       "pose": {
@@ -493,26 +493,26 @@
         ]
       },
       "position": [
-        84.25353114991475,
+        55.83770153473597,
         0.3,
-        55.59847340723838
+        43.273351126869194
       ],
       "animation": "walk",
       "motionState": "walking",
       "bounds": {
         "min": [
-          83.85478782288953,
-          0.29999999999999993,
-          54.97784795199031
+          55.2760458942449,
+          0.30000000000000004,
+          42.992523327286136
         ],
         "max": [
-          84.62421073698263,
-          2.2616363932415844,
-          56.170805428651654
+          56.399357175227046,
+          2.195587647185661,
+          43.55417892645225
         ],
-        "height": 1.9616363932415846
+        "height": 1.8955876471856608
       },
-      "groundedGap": -5.551115123125783e-17
+      "groundedGap": 5.551115123125783e-17
     },
     "boneQuaternionDelta": 2
   },
@@ -613,16 +613,16 @@
       "headBone": "head",
       "bounds": {
         "min": [
-          -2.7758188365573364,
+          -2.800027614519246,
           0.29999999999999993,
-          -0.9712005774871533
+          -0.9889088075996642
         ],
         "max": [
-          -1.6241811634426644,
-          2.283813451214716,
-          -0.3041398567180548
+          -1.5999723854807535,
+          2.3672174800125534,
+          -0.2938033371940181
         ],
-        "height": 1.9838134512147163
+        "height": 2.0672174800125536
       }
     },
     "boneQuaternionDelta": 0.06540310653959536
@@ -633,34 +633,34 @@
   },
   "portrait": {
     "before": {
-      "scaleY": 10.673195387280767,
-      "y": 3.5568317957602544
+      "scaleY": 10.356652682073832,
+      "y": 3.4513175606912774
     },
     "after": {
-      "scaleY": 44.82195069446903,
-      "y": 3.5424341019763035,
+      "scaleY": 43.49263355834812,
+      "y": 3.4369198669073264,
       "mouthLevel": 0.8498718768861688
     }
   },
   "performance": {
     "context": "Headless Chromium with SwiftShader; reference measurement, not physical Chromebook hardware.",
-    "durationMs": 5266.399999999998,
-    "frames": 19,
-    "averageFrameMs": 277.17894736842095,
-    "averageFps": 3.607777608992862,
-    "p95FrameMs": 299.8999999999978,
-    "p99FrameMs": 299.8999999999978,
-    "drawCalls": 453,
-    "triangles": 107084,
+    "durationMs": 5049.799999999999,
+    "frames": 18,
+    "averageFrameMs": 280.5444444444444,
+    "averageFps": 3.5644976038655,
+    "p95FrameMs": 300,
+    "p99FrameMs": 300,
+    "drawCalls": 481,
+    "triangles": 106268,
     "withoutCharacters": {
-      "durationMs": 3216.5,
+      "durationMs": 3249.800000000003,
       "frames": 12,
-      "averageFrameMs": 268.0416666666667,
-      "averageFps": 3.730763251981968,
+      "averageFrameMs": 270.8166666666669,
+      "averageFps": 3.6925349252261648,
       "p95FrameMs": 283.3999999999978,
       "p99FrameMs": 283.3999999999978,
-      "drawCalls": 363,
-      "triangles": 106004
+      "drawCalls": 367,
+      "triangles": 104900
     },
     "pedestrianCapObserved": 48,
     "pixelRatio": 1,
@@ -671,49 +671,49 @@
       "skinned": true,
       "head": "head",
       "headQuaternion": [
-        -0.032195130767011554,
-        -0.2894874836238947,
-        0.010629779795996629,
-        0.9565811403960925
+        -0.03222042030261872,
+        -0.2894836751105374,
+        0.010743183761024547,
+        0.9565801745607612
       ],
-      "bodyRotationY": -0.8299482760347561
+      "bodyRotationY": -0.8270262215639921
     },
     "after": {
       "headQuaternion": [
-        -0.032815018844923466,
-        -0.25668231488713694,
-        0.011106329780103771,
-        0.9658747399125849
+        -0.032603549917645525,
+        -0.2555770417481051,
+        0.011098710485774124,
+        0.9661750373972657
       ],
-      "bodyRotationY": -1.2946265435248336,
+      "bodyRotationY": -1.2890324954266996,
       "animation": "idle"
     },
-    "headQuaternionDelta": 0.03280516873675776
+    "headQuaternionDelta": 0.033906633362432326
   },
   "browser": {
     "consoleMessages": [
       {
         "type": "warning",
-        "text": "[.WebGL-0x3d3401454e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:64465/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x1364010b8e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:65034/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x3d3401454e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:64465/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x1364010b8e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:65034/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x3d3401454e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:64465/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x1364010b8e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:65034/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x3d3401454e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
-        "url": "http://127.0.0.1:64465/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x1364010b8e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+        "url": "http://127.0.0.1:65034/?dev=1&skipIntro=1&target=1",
         "line": 0
       }
     ],

@@ -83,3 +83,34 @@ an ordinary person.
 
 Accepted trade-off: this set is heavily male-presenting, so the crowd reads less
 mixed than the Quaternius cast did.
+
+## 2026-09-06 - Reserved ground is rotated, and walkers can always escape it
+
+Two faults were reported: pedestrians stalling in front of some buildings, and
+buildings appearing to spill onto the sidewalk.
+
+`Occupancy.addRect` used to snap a lot's rotation to the nearest quarter turn and
+keep an axis-aligned box. Twelve of seventeen landmark lots sit at arbitrary
+angles, so that box simultaneously reserved open pavement the building was
+nowhere near and missed the corners it really occupied. Reserved areas now carry
+their true angle and are tested in their own frame.
+
+That alone did not free a stalled walker, because the recovery path could not
+make progress: `rejoinNearestSidewalk` targeted the nearest sidewalk point, which
+for a pinched walker is the one it is already standing on. The zero-length leg
+"arrived" instantly, restored `t` to the same spot, was blocked again next frame,
+and ping-ponged forever. Worse, that same call reset the stall clock, so the
+watchdog meant to catch exactly this could never reach its threshold. A rejoin
+onto the walker's own position now adopts the road directly so the turn-around
+takes effect, the stall clock is left to accumulate, and a walker that has
+genuinely stalled gets a short window in which the reserved test is waived - the
+same escape valve `trafficEscapeTime` already provided for yielding.
+
+The apparent building spill was not oversized geometry: measured against their
+own lots, no landmark exceeds its plot. Four lots were simply authored too close
+to their road, so the building envelope itself bit 0.27-1.18 m into the sidewalk.
+They were nudged back (large-center-north, large-center-south, medium-northwest,
+medium-southwest); no lot now intrudes and none overlap each other.
+
+Guard: `.ai/verify-pedestrian-flow.mjs` builds a few landmarks and fails if any
+visible walker has not travelled.

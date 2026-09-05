@@ -1,0 +1,30 @@
+{
+  "built": 1,
+  "pageErrors": [],
+  "spill": [
+    {
+      "lot": "small-center-west",
+      "type": "cafe",
+      "builtWidth": 19.98,
+      "builtDepth": 20.12,
+      "envelope": [
+        16,
+        14
+      ],
+      "plot": [
+        20,
+        18
+      ],
+      "overEnvelopeW": 3.98,
+      "overEnvelopeD": 6.12,
+      "overPlotW": -0.02,
+      "overPlotD": 2.12,
+      "roadGap": -0.51,
+      "outliers": []
+    }
+  ],
+  "stuck": {
+    "total": 9,
+    "stalled": []
+  }
+}

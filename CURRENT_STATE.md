@@ -217,3 +217,12 @@ src/
               progression · unlockReveal
   ui/         hud
 ```
+
+## Known-good checks
+
+- `node .ai/capture-characters.mjs dist` and `... dist fallback` - NPC cast, both
+  with and without the character assets available.
+- `node .ai/verify-pedestrian-flow.mjs dist` - fails if any walker stalls in
+  front of a finished landmark.
+- `node .ai/audit-landmark-extents.mjs` (dev server) - each landmark's built
+  geometry against its lot.

@@ -280,17 +280,29 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       p.pendingNode = p.forward ? p.edge?.b : p.edge?.a;
       return;
     }
-    p.state = 'rejoining';
-    p.target = road.point;
     p.rejoinRoad = road;
     p.rejoinTurnAround = turnAround;
-    p.timer = 0;
     p.route = null;
     p.routeIndex = 0;
+    // A rejoin leg to the point the walker is already standing on is not a
+    // recovery: it "arrives" instantly, restores `t` to that same spot, gets
+    // blocked again next frame and ping-pongs forever without travelling. Adopt
+    // the road directly instead, so the turn-around actually takes effect.
+    const dx = road.point.x - p.group.position.x;
+    const dz = road.point.z - p.group.position.z;
+    if (dx * dx + dz * dz < 0.05 * 0.05) {
+      restoreRoadAfterRejoin(p);
+      return;
+    }
+    p.state = 'rejoining';
+    p.target = road.point;
+    p.timer = 0;
     clearTrafficYield(p);
     p.trafficEscapeTime = 0.8;
-    p.motionStallTime = 0;
-    p.motionStallStartedAt = 0;
+    // The stall clock is deliberately NOT reset here. A blocked walker calls
+    // this every frame, so clearing it meant the stall watchdog could never
+    // reach its threshold and the walker stayed frozen forever. Real movement
+    // already resets the clock in trackMotionProgress.
   }
 
   function inCarriageway(x, z) {
@@ -372,9 +384,12 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
 
   function updateWalkPosition(p, dt) {
     graph.pointOn(p.edge, p.t, p.forward, p.lateral, tmp);
-    if (builtOccupancy.overlapsReserved(tmp.x, tmp.y, 0.38)) {
+    if (p.reservedEscapeTime <= 0 && builtOccupancy.overlapsReserved(tmp.x, tmp.y, 0.38)) {
       // Re-route from the last valid point. Changing lateral sign here used to
       // throw the walker across the full road width in a single frame.
+      // The escape window is honoured here too: rejoining resets `t` to the
+      // point the walker is already on, so without it a walker pinched here
+      // rebuilds the same blocked step every frame and never travels.
       rejoinNearestSidewalk(p, { turnAround: true });
       return false;
     }
@@ -546,7 +561,14 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       return false;
     }
     clearTrafficYield(p);
-    if (!ignoreReserved && builtOccupancy.overlapsReserved(nx, nz, 0.38)) {
+    // Only a walker standing on free ground is turned back. Someone already
+    // inside a reserved area - a landmark finished on top of them - would
+    // otherwise have every step refused, including the one leading out, and
+    // would stand still forever flipping between walking and rejoining.
+    if (!ignoreReserved
+      && p.reservedEscapeTime <= 0
+      && builtOccupancy.overlapsReserved(nx, nz, 0.38)
+      && !builtOccupancy.overlapsReserved(p.group.position.x, p.group.position.z, 0.38)) {
       rejoinNearestSidewalk(p, { turnAround: true });
       p.wasMoving = false;
       return false;
@@ -621,6 +643,13 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       if (now - p.motionStallStartedAt >= MAX_MOTION_STALL_MS) {
         // Keep the earlier watchdog/reroute guarantee, but never recover by
         // relocating a walker who is already visible in the scene.
+        //
+        // Rejoining alone cannot free a walker pinched against a reserved area:
+        // the nearest sidewalk point is the one it is already standing on, so it
+        // re-enters `walking` at the identical spot, is blocked again, and never
+        // travels. Briefly waiving the reserved test lets it step clear under its
+        // own power, the same way trafficEscapeTime unsticks a yielded walker.
+        p.reservedEscapeTime = 1.2;
         rejoinNearestSidewalk(p, { turnAround: true });
       }
     }
@@ -877,6 +906,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       for (const p of active) {
         p.visitCooldown -= dt;
         p.trafficEscapeTime = Math.max(0, (p.trafficEscapeTime || 0) - dt);
+        p.reservedEscapeTime = Math.max(0, (p.reservedEscapeTime || 0) - dt);
         switch (p.state) {
           case 'walking':
             if (p.trafficEscapeTime <= 0

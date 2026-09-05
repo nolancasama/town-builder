@@ -140,9 +140,9 @@ const LANDMARK_PLOTS = [
      lots on the diagonal country lanes are rotated to match. */
   { id: 'small-center-west', plotClass: 'small', pos: [-44.1, 22.86], rot: -1.8491, zones: ['commercial', 'residential', 'civic'], entrance: [-51.6, 20.71] },
   { id: 'small-center-east', plotClass: 'small', pos: [-3.85, 24], rot: 1.5708, zones: ['commercial', 'residential', 'civic'], entrance: [3.95, 24] },
-  { id: 'large-center-north', plotClass: 'large', pos: [30.33, 31.26], rot: 0.0644, zones: ['civic', 'recreation', 'commercial', 'transport'], entrance: [31.17, 44.33] },
+  { id: 'large-center-north', plotClass: 'large', pos: [30.13, 30.18], rot: 0.0644, zones: ['civic', 'recreation', 'commercial', 'transport'], entrance: [31.17, 44.33] },
   { id: 'medium-center-south', plotClass: 'medium', pos: [-30.43, -36.09], rot: -3.0419, zones: ['civic', 'recreation', 'commercial', 'transport'], entrance: [-31.43, -46.14] },
-  { id: 'large-center-south', plotClass: 'large', pos: [20.26, -33.07], rot: 3.0916, zones: ['civic', 'recreation', 'commercial', 'transport', 'edge'], entrance: [20.91, -46.15] },
+  { id: 'large-center-south', plotClass: 'large', pos: [20.02, -31.69], rot: 3.0916, zones: ['civic', 'recreation', 'commercial', 'transport', 'edge'], entrance: [20.91, -46.15] },
 
   /* West-side plots keep development irregular and leave open agricultural ground. */
   { id: 'medium-west-north', plotClass: 'medium', pos: [-69.73, 26.3], rot: 1.2925, zones: ['civic', 'commercial', 'residential'], entrance: [-60.31, 29] },
@@ -150,7 +150,7 @@ const LANDMARK_PLOTS = [
 
   /* Outer northern row, all facing the same country-side street. */
   { id: 'small-northwest', plotClass: 'small', pos: [-81, 60.2], rot: -3.1416, zones: ['commercial', 'residential', 'civic'], entrance: [-81, 52.1] },
-  { id: 'medium-northwest', plotClass: 'medium', pos: [-51.39, 62.29], rot: 3.1088, zones: ['civic', 'recreation', 'edge'], entrance: [-51.05, 52.2] },
+  { id: 'medium-northwest', plotClass: 'medium', pos: [-51.39, 62.79], rot: 3.1088, zones: ['civic', 'recreation', 'edge'], entrance: [-51.05, 52.2] },
   { id: 'large-north', plotClass: 'large', pos: [-14.88, 66.49], rot: 3.1088, zones: ['civic', 'recreation', 'edge'], entrance: [-14.45, 53.4] },
   { id: 'large-northeast', plotClass: 'large', pos: [23.24, 66.19], rot: -3.0772, zones: ['recreation', 'commercial', 'edge'], entrance: [22.4, 53.12] },
   /* Set back 4m rather than flush: this corner is boxed in by the diagonal
@@ -159,7 +159,7 @@ const LANDMARK_PLOTS = [
 
   /* Outer southern row. The sole XL site stays open around the stadium. */
   { id: 'small-southwest', plotClass: 'small', pos: [-81, -60.2], rot: 0, zones: ['commercial', 'residential'], entrance: [-81, -52.1] },
-  { id: 'medium-southwest', plotClass: 'medium', pos: [-51.08, -62.56], rot: 0.0997, zones: ['civic', 'recreation', 'edge'], entrance: [-50.07, -52.51] },
+  { id: 'medium-southwest', plotClass: 'medium', pos: [-51.08, -63.46], rot: 0.0997, zones: ['civic', 'recreation', 'edge'], entrance: [-50.07, -52.51] },
   { id: 'large-south', plotClass: 'large', pos: [-15.71, -69.11], rot: 0.0997, zones: ['recreation', 'edge', 'civic'], entrance: [-14.41, -56.08] },
   { id: 'xl-stadium', plotClass: 'xl', pos: [30.73, -68.66], rot: -0.1747, zones: ['recreation'], entrance: [28.11, -53.79], reservedFor: 'stadium' },
 
