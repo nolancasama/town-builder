@@ -1,0 +1,318 @@
+{
+  "mode": "fallback",
+  "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+  "assertions": [
+    {
+      "message": "game reaches the choosing phase",
+      "pass": true,
+      "detail": "choosing"
+    },
+    {
+      "message": "pedestrian system remains populated",
+      "pass": true,
+      "detail": 6
+    },
+    {
+      "message": "world guide exposes the guide identity and head controls",
+      "pass": true,
+      "detail": {
+        "skinned": false,
+        "markedAsGuide": true,
+        "hasHead": true,
+        "hasMouth": true
+      }
+    },
+    {
+      "message": "opening town local remains present and identifiable",
+      "pass": true,
+      "detail": {
+        "present": true,
+        "name": "town-local",
+        "skinned": false,
+        "markedAsTownLocal": true
+      }
+    },
+    {
+      "message": "missing assets fall back to procedural ambient pedestrians",
+      "pass": true,
+      "detail": {
+        "phase": "choosing",
+        "pedestrianCount": 6,
+        "visiblePeople": 6,
+        "visibleSkinnedPedestrians": 0,
+        "visibleProceduralPedestrians": 6,
+        "touristCount": 6,
+        "skinnedTourists": 0,
+        "guide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "portraitGuide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "townLocal": {
+          "present": true,
+          "name": "town-local",
+          "skinned": false,
+          "markedAsTownLocal": true
+        }
+      }
+    },
+    {
+      "message": "missing assets fall back to procedural tourists",
+      "pass": true,
+      "detail": {
+        "phase": "choosing",
+        "pedestrianCount": 6,
+        "visiblePeople": 6,
+        "visibleSkinnedPedestrians": 0,
+        "visibleProceduralPedestrians": 6,
+        "touristCount": 6,
+        "skinnedTourists": 0,
+        "guide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "portraitGuide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "townLocal": {
+          "present": true,
+          "name": "town-local",
+          "skinned": false,
+          "markedAsTownLocal": true
+        }
+      }
+    },
+    {
+      "message": "missing assets fall back to the procedural world guide and town local",
+      "pass": true,
+      "detail": {
+        "phase": "choosing",
+        "pedestrianCount": 6,
+        "visiblePeople": 6,
+        "visibleSkinnedPedestrians": 0,
+        "visibleProceduralPedestrians": 6,
+        "touristCount": 6,
+        "skinnedTourists": 0,
+        "guide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "portraitGuide": {
+          "skinned": false,
+          "markedAsGuide": true,
+          "hasHead": true,
+          "hasMouth": true
+        },
+        "townLocal": {
+          "present": true,
+          "name": "town-local",
+          "skinned": false,
+          "markedAsTownLocal": true
+        }
+      }
+    },
+    {
+      "message": "missing assets fall back to the procedural speaking portrait",
+      "pass": true,
+      "detail": {
+        "skinned": false,
+        "markedAsGuide": true,
+        "hasHead": true,
+        "hasMouth": true
+      }
+    },
+    {
+      "message": "no uncaught page errors occur",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "message": "no unexpected console errors occur",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "message": "loader reports the intentional procedural fallback",
+      "pass": true
+    }
+  ],
+  "evidence": [],
+  "server": {
+    "kind": "static-dist",
+    "root": "dist",
+    "base": "http://127.0.0.1:61347"
+  },
+  "startup": {
+    "phase": "choosing",
+    "pedestrianCount": 6,
+    "visiblePeople": 6,
+    "visibleSkinnedPedestrians": 0,
+    "visibleProceduralPedestrians": 6,
+    "touristCount": 6,
+    "skinnedTourists": 0,
+    "guide": {
+      "skinned": false,
+      "markedAsGuide": true,
+      "hasHead": true,
+      "hasMouth": true
+    },
+    "portraitGuide": {
+      "skinned": false,
+      "markedAsGuide": true,
+      "hasHead": true,
+      "hasMouth": true
+    },
+    "townLocal": {
+      "present": true,
+      "name": "town-local",
+      "skinned": false,
+      "markedAsTownLocal": true
+    }
+  },
+  "browser": {
+    "consoleMessages": [
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/animations.glb",
+        "line": 0
+      },
+      {
+        "type": "warning",
+        "text": "[characters] Quaternius assets unavailable; using procedural people. TypeError: Failed to fetch\n    at i (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:5983)\n    at http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:6135\n    at z1 (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:7041)\n    at Db.init (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:100946)\n    at HTMLFormElement.<anonymous> (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:115635)\n    at eval (eval at evaluate (:290:30), <anonymous>:1:16)\n    at UtilityScript.evaluate (<anonymous>:292:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+        "url": "http://127.0.0.1:61347/assets/index-DDkRx5vQ.js",
+        "line": 3869
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/m_casual.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/m_hoodie.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/m_suit.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/m_worker.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/f_casual.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/f_formal.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/f_suit.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:61347/assets/characters/f_worker.glb",
+        "line": 0
+      },
+      {
+        "type": "warning",
+        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "line": 0
+      },
+      {
+        "type": "warning",
+        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "line": 0
+      },
+      {
+        "type": "warning",
+        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "line": 0
+      },
+      {
+        "type": "warning",
+        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "line": 0
+      }
+    ],
+    "pageErrors": [],
+    "characterRequestFailures": [
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/animations.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/m_casual.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/m_hoodie.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/m_suit.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/m_worker.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/f_casual.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/f_formal.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/f_suit.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:61347/assets/characters/f_worker.glb",
+        "error": "net::ERR_FAILED"
+      }
+    ],
+    "characterResponseFailures": [],
+    "unexpectedConsoleErrors": [],
+    "fallbackWarning": true
+  },
+  "failures": [],
+  "pass": true
+}

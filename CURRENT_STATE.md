@@ -41,6 +41,22 @@ landmarks measure inside their envelopes, and `LOT_EXCLUSIONS`,
 class/zone/occupancy checks. Live: 41 road segments, 37 houses and shops,
 9 of 9 rice-field sites placed, `WORLD` at 290 / 136 / 150.
 
+**NPC character assets.** Ambient pedestrians and guided-tour visitors use
+eight rigged Quaternius glTF characters with per-instance skin, hair and
+clothing variation, driven by one shared Idle/Idle_Neutral/Walk/Run/Wave
+animation asset.
+`npm run build:characters` regenerates the compact Draco-compressed GLBs
+directly from the two external source ZIPs. Loading is cached and asynchronous;
+the existing procedural people are retained as the offline/404 fallback. The
+guide and opening town local remain procedural for their voice-driven mouth and
+distinct lesson silhouettes. The ambient cap is 24; off-screen mixers are
+skipped and distant visible mixers are throttled to 10 Hz, including the tour
+cast. A worst-case headless SwiftShader reference run with 24 ambient people
+and five tourists rendered 167,198 triangles in 592 calls at 3.14 FPS (350.0 ms
+p95), versus 3.47 FPS, 110,906 triangles and 476 calls with character rendering
+and updates disabled. These software-rendered numbers are recorded for relative
+comparison, not as a Chromebook estimate.
+
 **Building progression.** 20 of the 33 active places are unlocked from the
 first playthrough; 13 start locked and are discovered through play, not
 purchased with any score. 2–3 rounds per game show a locked silhouette card
@@ -178,9 +194,10 @@ agent's per-frame displacement against that agent's own speed.
 - **Real-voice lip sync is unverified.** Capture and playback were tested with
   Chromium's synthetic microphone; how the mouth reads against actual child
   speech has not been observed.
-- **Chromebook performance is unmeasured.** The budget work is done (four draw
-  calls for all roads, instanced trees, pooled agents, capped pixel ratio, one
-  automatic quality drop) but no run on real hardware.
+- **Chromebook performance is unmeasured on real hardware.** The budget work is
+  in place (four draw calls for all roads, instanced trees, pooled/capped
+  skinned agents, mixer distance throttling, capped pixel ratio, one automatic
+  quality drop), with only synthetic headless timing available so far.
 - **Speech recognition needs Chrome/Edge and an internet connection.** Firefox
   and Safari fall back to typing.
 
@@ -192,7 +209,7 @@ agent's per-frame displacement against that agent's own speed.
 src/
   config/     lessons · town · landmarks · activities · progression
   core/       tween · rng · materials
-  world/      terrain · roads · graph · scenery · sky · props · characters
+  world/      terrain · roads · graph · scenery · sky · props · characters · characterModels
   buildings/  index (asset priority) · procedural (original 8) · extras
   systems/    cameraRig · speech · recorder · construction · pedestrians ·
               vehicles · particles · audio · choices · tour · tourRecords ·

@@ -1,17 +1,13 @@
 import * as THREE from 'three';
 import { PALETTE as P, mat, roundedBox, box, sphere, cylinder, mesh } from '../core/materials.js';
+import { createCharacterModel } from './characterModels.js';
 
 /**
  * TOUR CHARACTERS
  * ---------------
- * The guide and the visitors for phase three. They use the same toy-town
- * vocabulary as the townspeople (rounded boxes, spheres, pivot joints) so they
- * belong in the world, but they carry the extra rig the tour needs: a head that
- * turns independently, a mouth that opens with the child's recorded voice, and
- * arms that can point at a building or hold a camera up.
- *
- * No skeletons and no animation mixers - every pose is a handful of rotations,
- * which keeps a group of eight characters free on a Chromebook.
+ * The guide, visitors and opening local use the shared Quaternius skeleton and
+ * clips. The lightweight procedural rig remains the classroom-safe fallback
+ * when those assets cannot be loaded.
  */
 
 /* A deliberately broad range, so the group reads as international visitors
@@ -110,6 +106,93 @@ function addHair(g, rng, colour, forcedStyle = null) {
  * The guide
  * ------------------------------------------------------------------ */
 
+const GUIDE_MODELS = ['m_casual', 'm_hoodie', 'f_casual', 'f_formal'];
+
+/** Keep an accessory in real-world metres while parenting it to a rig bone. */
+function attachWorldSized(character, bone, accessory, offset) {
+  character.updateMatrixWorld(true);
+  const position = bone.getWorldPosition(new THREE.Vector3()).add(offset);
+  character.worldToLocal(position);
+  character.add(accessory);
+  accessory.position.copy(position);
+  character.updateMatrixWorld(true);
+  bone.attach(accessory);
+  return accessory;
+}
+
+function configureSkinnedPose(character) {
+  const d = character.userData;
+  d.phase = Math.random() * Math.PI * 2;
+  d.mouthLevel = 0;
+  d.talkLevel = 0;
+  d.pointAmount = 0;
+  d.eyes = [];
+  d.arms = [
+    character.getObjectByName('UpperArmL'),
+    character.getObjectByName('UpperArmR'),
+  ];
+  d.torso = character.getObjectByName('Chest') || character.getObjectByName('Spine');
+}
+
+function addGuideAccessories(character, { mouth = false } = {}) {
+  const head = character.userData.head;
+  const wrist = character.getObjectByName('WristL');
+
+  if (head) {
+    const cap = new THREE.Group();
+    cap.name = 'guide-cap';
+    const crown = mesh(sphere(0.18, 10, 6), mat(0xe8b23a), {
+      cast: false, receive: false,
+    });
+    crown.scale.y = 0.58;
+    cap.add(crown);
+    cap.add(mesh(box(0.32, 0.035, 0.16), mat(0xe8b23a), {
+      y: -0.035, z: 0.11, cast: false, receive: false,
+    }));
+    attachWorldSized(character, head, cap, new THREE.Vector3(0, 0.2, 0));
+    character.userData.cap = cap;
+
+    if (mouth) {
+      // Sized against this model's head rather than the procedural sphere: the
+      // portrait is a close-up, so anything wider reads as a bandana across the
+      // whole lower face rather than a mouth.
+      const mouthMesh = mesh(box(0.045, 0.011, 0.01), mat(0x5a3129), {
+        cast: false, receive: false,
+      });
+      mouthMesh.name = 'portrait-mouth';
+      attachWorldSized(character, head, mouthMesh, new THREE.Vector3(0, 0.055, 0.15));
+      character.userData.mouth = mouthMesh;
+      character.userData.mouthBaseScale = mouthMesh.scale.clone();
+      character.userData.mouthBasePosition = mouthMesh.position.clone();
+    }
+  }
+
+  if (wrist) {
+    const flag = new THREE.Group();
+    flag.name = 'guide-flag';
+    // Pole runs upward from the wrist; base at local y=0, top at y=1.05.
+    // The pole cylinder's own centre is at y=0.525 (half of 1.05 length).
+    flag.add(mesh(cylinder(0.018, 0.018, 1.05, 6), mat(0xd9d3c4), {
+      y: 0.525, cast: false, receive: false,
+    }));
+    const cloth = mesh(box(0.38, 0.28, 0.022), mat(0xef476f), {
+      x: 0.19, y: 0.97, cast: false, receive: false,
+    });
+    flag.add(cloth);
+    // Attach to wrist with no world offset so it starts in the hand,
+    // then nudge in wrist-local space: forward (z) so pole is in front of fist.
+    attachWorldSized(character, wrist, flag, new THREE.Vector3());
+    flag.position.z += 0.04;   // slight forward nudge in wrist-local space
+    flag.position.y -= 0.05;   // base of pole at the grip
+    character.userData.flag = flag;
+    character.userData.flagCloth = cloth;
+    character.userData.flagArm = character.getObjectByName('UpperArmL');
+  }
+  // Bag and strap are deliberately omitted: the world-unit offsets from the
+  // procedural rig land in empty air on the skeletal model, and the cap+flag
+  // are already enough to make the guide readable in a crowd.
+}
+
 /**
  * The child's avatar. Deliberately easy to pick out of the group in a wide
  * shot - one strong uniform colour, a cap, a shoulder bag and a little raised
@@ -117,6 +200,7 @@ function addHair(g, rng, colour, forcedStyle = null) {
  */
 export function guideSpec(rng) {
   return {
+    model: rng.pick(GUIDE_MODELS),
     skin: rng.pick(SKINS),
     hair: rng.pick(HAIRS),
     hairStyle: rng.pick(['crop', 'bob', 'long', 'bun', 'ponytail']),
@@ -127,42 +211,66 @@ export function guideSpec(rng) {
  * @param spec keeps the world guide and the portrait guide identical - they are
  * two models of the same person, which is the whole point of the cut-in.
  */
-export function makeGuide(rng, spec = null) {
-  const look = spec || guideSpec(rng);
+export function makeGuide(rng, spec = null, options = {}) {
+  const sourceLook = spec || guideSpec(rng);
+  const look = {
+    ...sourceLook,
+    model: sourceLook.model || rng.pick(GUIDE_MODELS),
+  };
   const uniform = 0x2f7f9e;
-  const g = buildBody({
-    skin: look.skin,
-    top: uniform,
-    bottom: 0x33455c,
-    height: 1.06,
+  const procedural = options.procedural === true;
+
+  if (procedural) {
+    // Original procedural guide build (fallback)
+    const g = buildBody({
+      skin: look.skin,
+      top: uniform,
+      bottom: 0x33455c,
+      height: 1.06,
+    });
+    addHair(g, rng, look.hair, look.hairStyle);
+    g.userData.spec = look;
+
+    const head = g.userData.head;
+    const cap = mesh(sphere(0.33, 10, 6), mat(0xe8b23a), { y: 0.24, cast: false, receive: false });
+    cap.scale.y = 0.52;
+    head.add(cap);
+    head.add(mesh(box(0.46, 0.05, 0.26), mat(0xe8b23a), { y: 0.3, z: 0.28, cast: false, receive: false }));
+
+    const bag = mesh(roundedBox(0.42, 0.4, 0.22, 0.08), mat(0xb0763a), { x: 0.34, y: 0.95, z: -0.06, receive: false });
+    g.add(bag);
+    const strap = mesh(box(0.08, 0.62, 0.1), mat(0x8a5a2c), { x: 0.1, y: 1.28, z: -0.02, cast: false, receive: false });
+    strap.rotation.z = -0.5;
+    g.add(strap);
+
+    const flag = new THREE.Group();
+    flag.position.set(0, -0.55, 0.06);
+    flag.add(mesh(cylinder(0.028, 0.028, 1.5, 6), mat(0xd9d3c4), { y: 0.55, cast: false, receive: false }));
+    const cloth = mesh(box(0.44, 0.3, 0.02), mat(0xef476f), { x: 0.23, y: 1.16, cast: false, receive: false });
+    flag.add(cloth);
+    g.userData.arms[0].add(flag);
+    g.userData.flagCloth = cloth;
+    g.userData.isGuide = true;
+    return g;
+  }
+
+  const character = createCharacterModel(rng, {
+    model: look.model,
+    camera: options.camera || null,
+    clothingColor: uniform,
+    skinColor: look.skin,
+    hairColor: look.hair,
   });
-  addHair(g, rng, look.hair, look.hairStyle);
-  g.userData.spec = look;
+  if (character) {
+    character.userData.spec = look;
+    configureSkinnedPose(character);
+    addGuideAccessories(character, { mouth: options.portrait === true });
+    character.userData.isGuide = true;
+    return character;
+  }
 
-  const head = g.userData.head;
-  // cap
-  const cap = mesh(sphere(0.33, 10, 6), mat(0xe8b23a), { y: 0.24, cast: false, receive: false });
-  cap.scale.y = 0.52;
-  head.add(cap);
-  head.add(mesh(box(0.46, 0.05, 0.26), mat(0xe8b23a), { y: 0.3, z: 0.28, cast: false, receive: false }));
-
-  // shoulder bag
-  const bag = mesh(roundedBox(0.42, 0.4, 0.22, 0.08), mat(0xb0763a), { x: 0.34, y: 0.95, z: -0.06, receive: false });
-  g.add(bag);
-  const strap = mesh(box(0.08, 0.62, 0.1), mat(0x8a5a2c), { x: 0.1, y: 1.28, z: -0.02, cast: false, receive: false });
-  strap.rotation.z = -0.5;
-  g.add(strap);
-
-  // a small guide flag, held in the left hand
-  const flag = new THREE.Group();
-  flag.position.set(0, -0.55, 0.06);
-  flag.add(mesh(cylinder(0.028, 0.028, 1.5, 6), mat(0xd9d3c4), { y: 0.55, cast: false, receive: false }));
-  const cloth = mesh(box(0.44, 0.3, 0.02), mat(0xef476f), { x: 0.23, y: 1.16, cast: false, receive: false });
-  flag.add(cloth);
-  g.userData.arms[0].add(flag);
-  g.userData.flagCloth = cloth;
-  g.userData.isGuide = true;
-  return g;
+  // Fallback to procedural if model loading fails
+  return makeGuide(rng, spec, { procedural: true });
 }
 
 /* ------------------------------------------------------------------ *
@@ -174,7 +282,7 @@ export function makeGuide(rng, spec = null) {
  * independently, so a group of six reads as a varied set of people rather than
  * six recolours of one model.
  */
-export function makeTourist(rng) {
+function makeProceduralTourist(rng) {
   const g = buildBody({
     skin: rng.pick(SKINS),
     top: rng.pick(TOPS),
@@ -230,12 +338,22 @@ export function makeTourist(rng) {
   return g;
 }
 
+/* Visitors on a sightseeing tour dress for a day out: no hi-vis work gear and no
+ * business suits, both of which belong on the townspeople going about their day
+ * rather than on the group being shown round. */
+const TOURIST_MODELS = ['m_casual', 'm_hoodie', 'f_casual', 'f_formal'];
+
+export function makeTourist(rng, options = {}) {
+  const model = options.model || rng.pick(TOURIST_MODELS);
+  return createCharacterModel(rng, { ...options, model }) || makeProceduralTourist(rng);
+}
+
 /**
  * The outspoken local who opens the game.  He deliberately shares the same
  * simple body rig as the tour cast, but none of the guide's cap, flag or bag:
  * that silhouette belongs to the child later in the game.
  */
-export function makeTownLocal(rng) {
+function makeProceduralTownLocal(rng) {
   const g = buildBody({
     skin: rng.pick(SKINS),
     top: 0xe66a45,
@@ -256,6 +374,22 @@ export function makeTownLocal(rng) {
   return g;
 }
 
+export function makeTownLocal(rng, options = {}) {
+  if (options.procedural !== true) {
+    const character = createCharacterModel(rng, {
+      model: 'm_hoodie',
+      camera: options.camera || null,
+      clothingColor: 0xe66a45,
+    });
+    if (character) {
+      configureSkinnedPose(character);
+      character.userData.isTownLocal = true;
+      return character;
+    }
+  }
+  return makeProceduralTownLocal(rng);
+}
+
 /* ------------------------------------------------------------------ *
  * Poses
  * ------------------------------------------------------------------ *
@@ -267,6 +401,16 @@ const _v = new THREE.Vector3();
 
 export function poseWalk(char, dt, speed = 1.6) {
   const d = char.userData;
+  if (d.isCharacterModel) {
+    d.playAnimation('Walk', { timeScale: speed / 1.6 });
+    d.updateAnimation(dt);
+    if (d.flagArm) {
+      d.flagArm.rotation.x = -1.55;
+      d.flagArm.rotation.z = 0.3;
+    }
+    char.position.y = d.baseY;
+    return;
+  }
   d.phase += dt * speed * 4.2;
   const s = Math.sin(d.phase);
   d.legs[0].rotation.x = s * 0.72;
@@ -279,6 +423,19 @@ export function poseWalk(char, dt, speed = 1.6) {
 
 export function poseIdle(char, dt) {
   const d = char.userData;
+  if (d.isCharacterModel) {
+    // Cheer owns the one mixer tick for this frame; avoid swapping Idle and
+    // Wave twice per frame in the guided-tour stop choreography.
+    if (d.state === 'cheer') return;
+    d.playAnimation(d.idleClip);
+    d.updateAnimation(dt);
+    if (d.flagArm) {
+      d.flagArm.rotation.x = -1.55;
+      d.flagArm.rotation.z = 0.3;
+    }
+    char.position.y = d.baseY;
+    return;
+  }
   d.phase += dt * 1.1;
   for (const leg of d.legs) leg.rotation.x *= 1 - Math.min(1, dt * 6);
   for (const arm of d.arms) arm.rotation.x *= 1 - Math.min(1, dt * 6);
@@ -292,6 +449,15 @@ export function poseIdle(char, dt) {
  */
 export function poseTalk(char, dt, level = 0) {
   const d = char.userData;
+  if (d.isCharacterModel) {
+    d.talkLevel += (level - d.talkLevel) * Math.min(1, dt * 18);
+    d.phase += dt * 1.6;
+    d.head.rotation.x += Math.sin(d.phase * 2.2) * 0.035 - d.talkLevel * 0.08;
+    d.head.rotation.z += Math.sin(d.phase * 1.3) * d.talkLevel * 0.04;
+    if (d.torso) d.torso.rotation.y += Math.sin(d.phase * 1.7) * d.talkLevel * 0.09;
+    return;
+  }
+  // Procedural mouth movement (existing behavior)
   d.mouthLevel += (level - d.mouthLevel) * Math.min(1, dt * 18);
   const open = Math.max(0.06, d.mouthLevel);
   d.mouth.scale.set(1 + open * 0.5, 0.5 + open * 5.5, 1);
@@ -302,14 +468,38 @@ export function poseTalk(char, dt, level = 0) {
 
 export function closeMouth(char, dt) {
   const d = char.userData;
+  if (d.isCharacterModel) {
+    d.talkLevel += (0 - d.talkLevel) * Math.min(1, dt * 10);
+    return;
+  }
   d.mouthLevel += (0 - d.mouthLevel) * Math.min(1, dt * 10);
   d.mouth.scale.set(1, 0.5, 1);
 }
 
 /** Turn the head (and gently the body) toward a point in the world. */
 export function poseLook(char, target, dt, { turnBody = false, rate = 6 } = {}) {
+  if (!char?.userData?.head) return;
   char.getWorldPosition(_v);
   const angle = Math.atan2(target.x - _v.x, target.z - _v.z);
+  if (char.userData.isCharacterModel) {
+    if (turnBody) {
+      let bodyDelta = angle - char.rotation.y;
+      while (bodyDelta > Math.PI) bodyDelta -= Math.PI * 2;
+      while (bodyDelta < -Math.PI) bodyDelta += Math.PI * 2;
+      char.rotation.y += bodyDelta * Math.min(1, dt * rate * 0.45);
+    }
+    let headDelta = angle - (char.rotation.y + char.userData.head.rotation.y);
+    while (headDelta > Math.PI) headDelta -= Math.PI * 2;
+    while (headDelta < -Math.PI) headDelta += Math.PI * 2;
+    const limited = THREE.MathUtils.clamp(
+      char.userData.head.rotation.y + headDelta,
+      -1.2,
+      1.2
+    );
+    char.userData.head.rotation.y += (limited - char.userData.head.rotation.y)
+      * Math.min(1, dt * rate);
+    return;
+  }
   if (turnBody) {
     let delta = angle - char.rotation.y;
     while (delta > Math.PI) delta -= Math.PI * 2;
@@ -328,6 +518,17 @@ export function poseLook(char, target, dt, { turnBody = false, rate = 6 } = {}) 
 /** Raise the free arm toward something - "and over there is the stadium". */
 export function posePoint(char, dt, amount = 1) {
   const d = char.userData;
+  // Support both procedural and skinned guide
+  if (d.isCharacterModel) {
+    d.pointAmount = d.pointAmount || 0;
+    d.pointAmount += (amount - d.pointAmount) * Math.min(1, dt * 7);
+    const arm = char.getObjectByName('UpperArmR') || char.getObjectByName('WristR') || d.arms?.[1];
+    if (arm) {
+      arm.rotation.x = -d.pointAmount * 1.45;
+      arm.rotation.z = -d.pointAmount * 0.32;
+    }
+    return;
+  }
   d.pointAmount += (amount - d.pointAmount) * Math.min(1, dt * 7);
   const arm = d.arms[1];
   arm.rotation.x = -d.pointAmount * 1.45;
@@ -337,6 +538,7 @@ export function posePoint(char, dt, amount = 1) {
 /** Lift the camera to eye level and take the shot. */
 export function poseShoot(char, dt, amount = 1) {
   const d = char.userData;
+  if (d.isCharacterModel) return;
   d.cameraUp += (amount - d.cameraUp) * Math.min(1, dt * 8);
   const arm = d.arms[1];
   arm.rotation.x = -d.cameraUp * 1.75;
@@ -347,6 +549,12 @@ export function poseShoot(char, dt, amount = 1) {
 /** Hands up, a happy little bounce - used for the applause at the end. */
 export function poseCheer(char, dt) {
   const d = char.userData;
+  if (d.isCharacterModel) {
+    d.playAnimation('Wave');
+    d.updateAnimation(dt);
+    char.position.y = d.baseY;
+    return;
+  }
   d.phase += dt * 7;
   const s = Math.abs(Math.sin(d.phase));
   d.arms[0].rotation.x = -2.2 - s * 0.3;
@@ -359,6 +567,7 @@ export function poseCheer(char, dt) {
 /** Reset the transient pose channels when a state ends. */
 export function relax(char, dt) {
   const d = char.userData;
+  if (d.isCharacterModel) return;
   d.pointAmount += (0 - d.pointAmount) * Math.min(1, dt * 6);
   d.cameraUp += (0 - d.cameraUp) * Math.min(1, dt * 6);
   d.arms[0].rotation.z *= 1 - Math.min(1, dt * 6);

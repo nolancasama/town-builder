@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { PALETTE as P, mat, roundedBox, box, sphere, mesh } from '../core/materials.js';
 import { LANDMARK_LOTS } from '../config/town.js';
 import { Occupancy } from '../world/scenery.js';
+import { createCharacterModel } from '../world/characterModels.js';
 
 /**
  * PEDESTRIANS
  * -----------
- * Pooled low-poly people walking a waypoint network. There is no pathfinding:
+ * Pooled animated people walking a waypoint network. There is no pathfinding:
  * a walker follows an edge, and at each junction picks another one. Some of
  * them detour to the entrance of a finished landmark, idle there, and come back
  * - which is what makes new buildings feel like they attract people.
@@ -24,7 +25,10 @@ const SIDEWALK_OFFSET_MAX = 1.9;
 const DOOR_CLEARANCE = 0.48;
 const RETIREMENT_EXIT_DISTANCE = 24;
 
-export function makePerson(rng) {
+export function makePerson(rng, { camera = null } = {}) {
+  const character = createCharacterModel(rng, { camera });
+  if (character) return character;
+
   const g = new THREE.Group();
   const skin = mat(rng.pick(SKIN));
   const top = mat(rng.pick(TOPS));
@@ -63,7 +67,7 @@ export function makePerson(rng) {
   return g;
 }
 
-export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
+export function createPedestrians(scene, graph, rng, { max = 24, camera = null } = {}) {
   const root = new THREE.Group();
   root.name = 'pedestrians';
   scene.add(root);
@@ -249,6 +253,7 @@ export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
     p.pendingPool = false;
     p.route = null;
     p.routeIndex = 0;
+    p.animationAccumulator = 0;
     p.rejoinRoad = null;
     p.visitCooldown = rng.range(4, 20);
     graph.pointOn(p.edge, p.t, p.forward, p.lateral, tmp);
@@ -562,6 +567,25 @@ export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
   }
 
   function animateWalk(p, dt, moving) {
+    if (p.group.userData.isCharacterModel) {
+      const data = p.group.userData;
+      data.playAnimation(moving ? 'Walk' : data.idleClip, {
+        timeScale: moving ? p.speed / 1.9 : 1,
+      });
+
+      const activeCamera = camera || globalThis.window?.game?.camera;
+      p.animationAccumulator = Math.min(0.2, (p.animationAccumulator || 0) + dt);
+      if (activeCamera) {
+        const onScreen = agentIsOnScreen(p, activeCamera);
+        if (!onScreen) return;
+        const far = activeCamera.position.distanceToSquared(p.group.position) > 45 * 45;
+        if (far && p.animationAccumulator < 0.1) return;
+      }
+      data.updateAnimation(p.animationAccumulator);
+      p.animationAccumulator = 0;
+      return;
+    }
+
     const { legs, arms } = p.group.userData;
     if (moving) {
       p.group.userData.phase += dt * p.speed * 4.2;
@@ -604,11 +628,11 @@ export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
     p.progressZ = p.group.position.z;
   }
 
-  function agentIsOnScreen(p) {
-    const camera = globalThis.window?.game?.camera;
-    if (!camera) return false;
-    camera.updateMatrixWorld();
-    viewPoint.copy(p.group.position).project(camera);
+  function agentIsOnScreen(p, activeCamera = camera || globalThis.window?.game?.camera) {
+    if (!activeCamera) return false;
+    viewPoint.copy(p.group.position);
+    viewPoint.y += 1;
+    viewPoint.project(activeCamera);
     return viewPoint.z >= -1 && viewPoint.z <= 1
       && Math.abs(viewPoint.x) <= 1.05 && Math.abs(viewPoint.y) <= 1.05;
   }
@@ -734,11 +758,12 @@ export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
      * Adopt an externally-built character as a permanent walker. The opening
      * scene's local uses this instead of being deleted: he keeps his own body
      * and joins the crowd, walking to the nearest sidewalk from wherever he is
-     * standing rather than being snapped onto the network. Marked `permanent`
-     * so a population drop never retires him.
-     */
+    * standing rather than being snapped onto the network. Marked `permanent`
+    * so a population drop never retires him.
+    */
     adopt(group) {
-      if (!group?.userData?.legs || !group.userData.arms) return null;
+      if (!group || (!group.userData.isCharacterModel
+        && (!group.userData.legs || !group.userData.arms))) return null;
       const road = nearestRoadPoint(group.position.x, group.position.z);
       if (!road) return null;
       const p = {
@@ -847,6 +872,8 @@ export function createPedestrians(scene, graph, rng, { max = 64 } = {}) {
     },
 
     update(dt) {
+      const activeCamera = camera || globalThis.window?.game?.camera;
+      activeCamera?.updateMatrixWorld();
       for (const p of active) {
         p.visitCooldown -= dt;
         p.trafficEscapeTime = Math.max(0, (p.trafficEscapeTime || 0) - dt);

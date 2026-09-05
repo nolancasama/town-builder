@@ -75,7 +75,9 @@ export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, ski
     local.rotation.y = Math.atan2(Math.sin(local.rotation.y), Math.cos(local.rotation.y));
     if (!pointing) {
       relax(local, dt);
-      if (!talking) {
+      // The skinned local rests through its Idle clip; only the procedural rig
+      // has arm pivots to pose by hand.
+      if (!talking && local.userData.arms) {
         // A jaunty hands-on-hips rest reads at medium distance and makes him
         // feel impatient even during the quiet establishing beat.
         const settle = Math.min(1, dt * 6);

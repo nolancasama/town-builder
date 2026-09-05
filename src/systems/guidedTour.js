@@ -27,7 +27,7 @@ export function createGuidedTour({
   root.visible = false;
   scene.add(root);
 
-  const guide = makeGuide(rng);
+  const guide = makeGuide(rng, null, { camera: rig.camera });
   root.add(guide);
 
   // the same person again, for the large speaking cut-in
@@ -36,7 +36,7 @@ export function createGuidedTour({
   const tourists = [];
   const touristCount = rng.int(5, 7);
   for (let i = 0; i < touristCount; i++) {
-    const t = makeTourist(rng);
+    const t = makeTourist(rng, { camera: rig.camera });
     t.userData.slot = i;
     t.userData.lag = 1.4 + i * 0.55 + rng.range(-0.2, 0.2);
     t.userData.side = (i % 2 ? 1 : -1) * (0.9 + Math.floor(i / 2) * 0.75);
@@ -186,7 +186,7 @@ export function createGuidedTour({
         trail.push(guide.position.clone());
         if (trail.length > 240) trail.shift();
       }
-    } else if (!talking) {
+    } else {
       poseIdle(guide, dt);
     }
 

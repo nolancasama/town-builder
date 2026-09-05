@@ -1,0 +1,46 @@
+{
+  "task": "Correct the visual placement defects in the now-working Quaternius NPC conversion. The conversion itself is done and all 25 capture assertions pass - this is a focused polish pass on accessory attachment and portrait framing, judged from screenshots in qa-evidence/characters/.",
+
+  "requirements": [
+    "FLAG IS NOT IN THE GUIDE'S HAND. In qa-evidence/characters/guide-pointing.png the guide's flag renders as a red-pink quad floating in mid-air to the right of the raised hand, with no pole visibly connecting it to the hand. The flag group is attached to the 'WristL' bone but is still positioned with offsets that were tuned for the old procedural arm pivot (roughly position 0,-0.55,0.06 with the pole cylinder at y 0.55 and the cloth at x 0.23, y 1.16). Re-derive the flag's local transform for the wrist bone so the pole sits in the fist, runs up past the hand, and the cloth flies from the top of the pole. The pole must be visibly connected to the hand at normal viewing distance.",
+    "SHOULDER BAG FLOATS. In the same screenshots the bag is an orange box hovering in front of the guide's torso, clearly detached. Either attach it to a torso bone ('Chest', 'Torso' or 'Abdomen' all exist) with a transform that makes it hang at the hip on a strap like a real shoulder bag, or drop the bag entirely and keep the cap and flag as the guide's identifying marks. A floating box is not acceptable; if it cannot be made to read correctly, remove it and say so.",
+    "PORTRAIT FRAMING REGRESSED. The portrait cut-in is specified as a large head-and-shoulders close-up of the guide, and in qa-evidence/characters/portrait-mid-speech.png it now shows the whole body from cap to knees, leaving the face small in the panel. Restore head-and-shoulders framing: the head and upper chest should fill the panel the way the procedural portrait did. The portrait camera and/or the guide's placement in the portrait scene needs adjusting for the new model's proportions and pivot.",
+    "PORTRAIT POSE IS UNNATURAL. In the same screenshot the portrait guide's arms are splayed straight out sideways, close to a bind/T pose, which reads as broken. The portrait guide should rest in a natural pose - let its Idle clip play, and do not apply the world guide's raised-flag arm override or pointing override to the portrait instance. The flag is already hidden in the portrait; the arm that would hold it must not stay locked in the raised position.",
+    "PORTRAIT MOUTH SHAPE. The bone-attached mouth works and correctly opens with the voice level - keep that behaviour exactly. But it currently reads as a wide dark bar sitting low on the face, more like a moustache than a mouth. Narrow it, raise it to sit correctly between nose and chin for this model's head proportions, and keep it flat-shaded and low-poly to match the face. Verify it still tracks the voice level and still sits correctly when the head bone rotates during speech.",
+    "The town-local capture (qa-evidence/characters/town-local-mid-speech.png) is currently a wide aerial establishing shot in which the town local is not visible at all, so it proves nothing. Recapture it framed on the town local while it is speaking, close enough to judge the character and its head/body speech motion."
+  ],
+
+  "constraints": [
+    "Do not regress anything that currently works. All 25 assertions in .ai/capture-characters.mjs pass right now and must still pass afterwards.",
+    "Do not change which models are used, the material tinting approach, the clip set, the pedestrian cap of 24, or the off-screen/far-distance mixer throttling.",
+    "Do not re-export or modify anything in public/assets/characters/.",
+    "Bone names in the loaded models have NO dots - the rig exposes Root, Body, Hips, Abdomen, Torso, Chest, Neck, Head, ShoulderL, UpperArmL, LowerArmL, WristL, Index1L..., ShoulderR, UpperArmR, LowerArmR, WristR, UpperLegL, LowerLegL, FootL, UpperLegR, LowerLegR, FootR. Looking up a dotted name like 'Wrist.L' silently returns undefined - that exact mistake was the cause of the last round of breakage, so use these names verbatim.",
+    "Meshes attached to a bone inherit that bone's world scale, so accessory sizes and offsets must be computed in bone-local space rather than reusing world-unit numbers from the procedural rig.",
+    "Do not modify unrelated systems, and do not commit, push, or alter git history."
+  ],
+
+  "startingPoints": [
+    "src/world/characters.js",
+    "src/systems/portrait.js",
+    ".ai/capture-characters.mjs"
+  ],
+
+  "validation": [
+    "npm run build",
+    "node .ai/capture-characters.mjs dist (all existing assertions must still pass)",
+    "Recapture qa-evidence/characters/guide-pointing.png, guide-wide-among-visitors.png, portrait-mid-speech.png and town-local-mid-speech.png so the fixes can be judged visually"
+  ],
+
+  "notes": "The conversion work is finished and correct - pedestrians, tourists, guide, town local and portrait are all skinned Quaternius models, the portrait keeps a working voice-driven mouth, and the landmark activity actors animate again. What is left is purely that accessories were attached to bones using offsets copied from the old procedural rig, so they land in the wrong place, and that the portrait camera was never re-framed for the new model's proportions. Judge your work from the screenshots, not just from the assertions passing - the assertions cannot see that a flag is floating next to a hand instead of in it. Look at the captured images before declaring done.",
+
+  "priorFailure": "capability",
+  "priorFailureDetail": "gemini-3.7-flash-low previously attempted this same guide-accessory work on this same file and failed on the merits, not on infrastructure: it recoloured the guide by traversing every mesh and copying one uniform colour onto every material, flattening skin, hair and eyes into a featureless silhouette, and it parented a world-unit cap mesh straight onto the scaled Head bone so it rendered as a giant disc floating above the head. It also used dotted bone names that do not exist in the loaded rig, so the flag silently never attached. This correction is precisely that class of bone-space transform work.",
+
+  "category": "3d-graphics",
+  "complexity": "hard",
+  "bounded": true,
+  "exploration": "local",
+  "risk": "medium",
+  "expectedCost": "medium",
+  "executionStyle": "deep-reasoning"
+}

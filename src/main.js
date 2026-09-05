@@ -27,6 +27,7 @@ import { createProgression } from './systems/progression.js';
 import { createUnlockReveal } from './systems/unlockReveal.js';
 import { createOpeningScene } from './systems/openingScene.js';
 import { wait } from './core/tween.js';
+import { preloadCharacterModels } from './world/characterModels.js';
 
 /**
  * OUR TOWN - speak English, build a town.
@@ -115,15 +116,20 @@ class Game {
     );
 
     this.lights = createLighting(this.scene, this.renderer);
+    const characterPreload = preloadCharacterModels();
     this.hud.setLoading(0.05);
     await this.nextFrame();
 
     this.world = buildWorld(this.scene, this.rng, (p) => this.hud.setLoading(0.05 + p * 0.8));
     await this.nextFrame();
+    await characterPreload;
 
     this.rig = createCameraRig(this.camera, this.renderer.domElement);
     this.particles = createParticles(this.scene);
-    this.pedestrians = createPedestrians(this.scene, this.world.graph, this.rng, { max: 70 });
+    this.pedestrians = createPedestrians(this.scene, this.world.graph, this.rng, {
+      max: 24,
+      camera: this.camera,
+    });
     this.vehicles = createVehicles(this.scene, this.world.graph, this.rng, { maxCars: 16, maxBikes: 10 });
     this.pedestrians.setVehicles(this.vehicles);
     this.vehicles.setPedestrians(this.pedestrians);
@@ -143,6 +149,7 @@ class Game {
       particles: this.particles,
       audio: this.audio,
       pedestrians: this.pedestrians,
+      camera: this.camera,
     });
     this.tour = this.makeTour();
     this.guidedTour = createGuidedTour({
@@ -810,6 +817,7 @@ class Game {
       particles: this.particles,
       audio: this.audio,
       pedestrians: this.pedestrians,
+      camera: this.camera,
     });
     this.activities.reset();
     this.tour = this.makeTour();

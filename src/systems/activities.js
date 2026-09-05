@@ -23,7 +23,7 @@ import { makeCar, makeBicycle } from '../world/props.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
-export function createActivityDirector({ rng, particles, audio, pedestrians }) {
+export function createActivityDirector({ rng, particles, audio, pedestrians, camera = null }) {
   /** Every running activity: { key, update(dt, time) } */
   const running = [];
   /** type -> Set of action ids already active, so repeats do not stack twice. */
@@ -43,7 +43,7 @@ export function createActivityDirector({ rng, particles, audio, pedestrians }) {
 
   /** A little person, sized and dropped into the building's local space. */
   function actor(stage, x, z, { scale = 1, y = 0 } = {}) {
-    const person = makePerson(rng);
+    const person = makePerson(rng, { camera });
     person.position.set(x, y, z);
     person.scale.multiplyScalar(scale);
     person.rotation.y = rng.range(0, Math.PI * 2);
@@ -53,6 +53,15 @@ export function createActivityDirector({ rng, particles, audio, pedestrians }) {
 
   /** Walk/idle animation borrowed from the pedestrian model's own rig. */
   function stride(person, dt, speed, moving = true) {
+    if (person.userData.isCharacterModel) {
+      const data = person.userData;
+      data.playAnimation(moving ? 'Walk' : data.idleClip, {
+        timeScale: moving ? speed / 1.9 : 1,
+      });
+      data.updateAnimation(dt);
+      return;
+    }
+
     const { legs, arms } = person.userData;
     if (!legs) return;
     if (moving) {
@@ -148,6 +157,7 @@ export function createActivityDirector({ rng, particles, audio, pedestrians }) {
               arms[1].rotation.x = -Math.abs(Math.sin(it.phase)) * 2.4;
             }
             it.person.position.y = Math.abs(Math.sin(it.phase)) * 0.14;
+            if (it.person.userData.isCharacterModel) stride(it.person, dt, 1, false);
             continue;
           }
           // wander between little destinations
@@ -432,6 +442,7 @@ export function createActivityDirector({ rng, particles, audio, pedestrians }) {
             arms[0].rotation.x = Math.sin(s.phase) * 1.6;
             arms[1].rotation.x = -Math.sin(s.phase) * 1.6;
           }
+          if (s.person.userData.isCharacterModel) stride(s.person, dt, s.speed, true);
         }
         splash -= dt;
         if (splash <= 0) {

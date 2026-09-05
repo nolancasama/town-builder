@@ -16,8 +16,8 @@ import { damp } from '../core/tween.js';
  * WebGL context, one renderer, no render-target read-back and no second copy of
  * the town - about twenty extra meshes in total.
  *
- * The world guide keeps its own gestures and mouth movement; this layer is
- * additional, never a replacement.
+ * The world guide keeps its own gestures; this layer adds the close-up mouth
+ * that makes the child's recorded speech readable.
  */
 export function createPortrait({ rng, spec }) {
   const scene = new THREE.Scene();
@@ -76,7 +76,7 @@ export function createPortrait({ rng, spec }) {
   backdrop.position.set(0, 1.4, -2.4);
   scene.add(backdrop);
 
-  const guide = makeGuide(rng, spec);
+  const guide = makeGuide(rng, spec, { portrait: true });
   guide.position.set(0, 0, 0);
   // the guide flag reads well in the town but crosses the face up close
   if (guide.userData.flagCloth) {
@@ -132,11 +132,28 @@ export function createPortrait({ rng, spec }) {
 
       const d = guide.userData;
 
+      if (d.isCharacterModel && (state.visible || state.t > 0.001)) {
+        d.playAnimation(d.idleClip);
+        d.updateAnimation(dt);
+      }
+
       // mouth: smoothed so it never chatters, but clearly tied to the audio
       d.mouthLevel = damp(d.mouthLevel, state.level, 22, dt);
       const open = Math.max(0.05, d.mouthLevel);
-      d.mouth.scale.set(1 + open * 0.55, 0.45 + open * 7, 1);
-      d.mouth.position.y = 0.06 - open * 0.055;
+      if (d.mouthBaseScale) {
+        // Gentler than the procedural rig's 7x stretch, whose base box was far
+        // smaller relative to its head.
+        d.mouth.scale.set(
+          d.mouthBaseScale.x * (1 + open * 0.22),
+          d.mouthBaseScale.y * (0.6 + open * 3),
+          d.mouthBaseScale.z
+        );
+        d.mouth.position.copy(d.mouthBasePosition);
+        d.mouth.position.y -= open * 0.018;
+      } else {
+        d.mouth.scale.set(1 + open * 0.55, 0.45 + open * 7, 1);
+        d.mouth.position.y = 0.06 - open * 0.055;
+      }
 
       // breathing and a little sway - alive, not restless
       state.breathe += dt * 1.5;
@@ -159,11 +176,16 @@ export function createPortrait({ rng, spec }) {
         eye.scale.y = damp(eye.scale.y, wanted, 30, dt);
       }
 
-      // a small presenting gesture while talking
-      const gesture = d.mouthLevel > 0.12 ? 1 : 0;
-      d.arms[1].rotation.x = damp(d.arms[1].rotation.x, -0.5 - gesture * 0.35, 5, dt);
-      d.arms[1].rotation.z = damp(d.arms[1].rotation.z, -0.12 - gesture * 0.1, 5, dt);
-      d.arms[0].rotation.x = damp(d.arms[0].rotation.x, -0.12, 4, dt);
+      // A small presenting gesture while talking. These offsets were tuned for
+      // the procedural arm pivots; driving the skinned rig's shoulder bones with
+      // them splays the arms into something close to a bind pose, so the model
+      // is left to its Idle clip instead.
+      if (!d.isCharacterModel) {
+        const gesture = d.mouthLevel > 0.12 ? 1 : 0;
+        d.arms[1].rotation.x = damp(d.arms[1].rotation.x, -0.5 - gesture * 0.35, 5, dt);
+        d.arms[1].rotation.z = damp(d.arms[1].rotation.z, -0.12 - gesture * 0.1, 5, dt);
+        d.arms[0].rotation.x = damp(d.arms[0].rotation.x, -0.12, 4, dt);
+      }
     },
 
     /**
@@ -190,9 +212,11 @@ export function createPortrait({ rng, spec }) {
       const aspect = panelW / panelH;
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
-      // head and shoulders with headroom - a character portrait, not a webcam
-      camera.position.set(0.12, 1.66, 3.9);
-      camera.lookAt(0, 1.5, 0);
+      // head and shoulders with headroom - a character portrait, not a webcam.
+      // At this fov the framing spans roughly 0.85m, so it cuts in around the
+      // chest rather than showing the whole standing body.
+      camera.position.set(0.10, 1.74, 1.6);
+      camera.lookAt(0, 1.68, 0);
 
       // stretch the rounded panel to exactly fill the cut-in
       if (Math.abs(aspect - panelAspect) > 0.02) {
