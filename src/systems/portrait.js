@@ -213,10 +213,10 @@ export function createPortrait({ rng, spec }) {
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
       // head and shoulders with headroom - a character portrait, not a webcam.
-      // At this fov the framing spans roughly 0.85m, so it cuts in around the
-      // chest rather than showing the whole standing body.
-      camera.position.set(0.10, 1.74, 1.6);
-      camera.lookAt(0, 1.68, 0);
+      // These blocky heads are large relative to the body, so the framing spans
+      // about a metre: cap to upper chest, rather than a face filling the panel.
+      camera.position.set(0.10, 1.68, 2.2);
+      camera.lookAt(0, 1.56, 0);
 
       // stretch the rounded panel to exactly fill the cut-in
       if (Math.abs(aspect - panelAspect) > 0.02) {

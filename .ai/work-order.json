@@ -1,46 +1,61 @@
 {
-  "task": "Correct the visual placement defects in the now-working Quaternius NPC conversion. The conversion itself is done and all 25 capture assertions pass - this is a focused polish pass on accessory attachment and portrait framing, judged from screenshots in qa-evidence/characters/.",
+  "task": "Replace the Quaternius skinned NPC cast with Kenney Blocky Characters 2.0 (CC0) throughout the Osaka town-builder ESL game. The Kenney models are not skinned - they are an 8-node object hierarchy animated by node transforms - which lets the whole skinned-mesh code path, the Draco decoder and the glTF conversion pipeline be deleted, and the site payload drop from about 6.2 MB to about 2 MB.",
 
   "requirements": [
-    "FLAG IS NOT IN THE GUIDE'S HAND. In qa-evidence/characters/guide-pointing.png the guide's flag renders as a red-pink quad floating in mid-air to the right of the raised hand, with no pole visibly connecting it to the hand. The flag group is attached to the 'WristL' bone but is still positioned with offsets that were tuned for the old procedural arm pivot (roughly position 0,-0.55,0.06 with the pole cylinder at y 0.55 and the cloth at x 0.23, y 1.16). Re-derive the flag's local transform for the wrist bone so the pole sits in the fist, runs up past the hand, and the cloth flies from the top of the pole. The pole must be visibly connected to the hand at normal viewing distance.",
-    "SHOULDER BAG FLOATS. In the same screenshots the bag is an orange box hovering in front of the guide's torso, clearly detached. Either attach it to a torso bone ('Chest', 'Torso' or 'Abdomen' all exist) with a transform that makes it hang at the hip on a strap like a real shoulder bag, or drop the bag entirely and keep the cap and flag as the guide's identifying marks. A floating box is not acceptable; if it cannot be made to read correctly, remove it and say so.",
-    "PORTRAIT FRAMING REGRESSED. The portrait cut-in is specified as a large head-and-shoulders close-up of the guide, and in qa-evidence/characters/portrait-mid-speech.png it now shows the whole body from cap to knees, leaving the face small in the panel. Restore head-and-shoulders framing: the head and upper chest should fill the panel the way the procedural portrait did. The portrait camera and/or the guide's placement in the portrait scene needs adjusting for the new model's proportions and pivot.",
-    "PORTRAIT POSE IS UNNATURAL. In the same screenshot the portrait guide's arms are splayed straight out sideways, close to a bind/T pose, which reads as broken. The portrait guide should rest in a natural pose - let its Idle clip play, and do not apply the world guide's raised-flag arm override or pointing override to the portrait instance. The flag is already hidden in the portrait; the arm that would hold it must not stay locked in the raised position.",
-    "PORTRAIT MOUTH SHAPE. The bone-attached mouth works and correctly opens with the voice level - keep that behaviour exactly. But it currently reads as a wide dark bar sitting low on the face, more like a moustache than a mouth. Narrow it, raise it to sit correctly between nose and chin for this model's head proportions, and keep it flat-shaded and low-poly to match the face. Verify it still tracks the voice level and still sits correctly when the head bone rotates during speech.",
-    "The town-local capture (qa-evidence/characters/town-local-mid-speech.png) is currently a wide aerial establishing shot in which the town local is not visible at all, so it proves nothing. Recapture it framed on the town local while it is speaking, close enough to judge the character and its head/body speech motion."
+    "Source: C:/Users/nolan/Downloads/kenney_blocky-characters_20.zip, models at 'Models/GLB format/character-<letter>.glb' for letters a through r. Each .glb is ~110 KB, fully self-contained (embedded texture, one material), and needs NO conversion - copy the ones in scope into public/assets/characters/ as-is. All 18 together are only 2.04 MB.",
+    "Every model shares an identical structure: nodes 'root', 'leg-left', 'leg-right', 'torso', 'arm-left', 'arm-right', 'head' under a per-file root named 'character-<letter>', zero skins, and 27 animation clips: static, idle, walk, sprint, sit, drive, die, pick-up, emote-yes, emote-no, holding-*, attack-*, interact-*, wheelchair-*.",
+    "COMMON cast, used for pedestrians, tour tourists, the guide and the opening town local - the nine ordinary townspeople: character-a, character-b, character-e, character-f, character-i, character-j, character-k, character-m, character-q.",
+    "RARE cast, ambient street pedestrians ONLY: character-c, character-d, character-g, character-h, character-l, character-n, character-o, character-p, character-r. These are a zombie, orcs, robot knights, a ninja, a vampire and a pirate. They must be genuinely rare - roughly 1 in 12 ambient pedestrians - as an occasional surprise. They must NEVER be selected for the guide (the child's own avatar), the portrait, the opening town local, or the tour group.",
+    "Rewrite src/world/characterModels.js for non-skinned models: drop SkeletonUtils and DRACOLoader entirely, use a plain deep clone for instancing, and keep one AnimationMixer per instance targeting the cloned node hierarchy. Keep the existing public shape of the module (preload, ready check, createCharacterModel factory, playAnimation/updateAnimation on userData) so callers change as little as possible.",
+    "Map the game's motion onto the new clips: walking uses 'walk', idling uses 'idle', running uses 'sprint', and the tour's celebration uses 'emote-yes'. There is no wave or point clip.",
+    "Populate userData.head from the 'head' node, userData.arms from ['arm-left','arm-right'] and userData.legs from ['leg-left','leg-right']. These map directly onto what the original procedural pose helpers already manipulate, so poseLook (head turn), posePoint (raise an arm) and the rest should drive the nodes directly rather than needing a separate skinned branch. Simplify the isCharacterModel dispatch in src/world/characters.js wherever this makes a branch unnecessary - but a node rotated by a pose helper still has to be applied AFTER mixer.update() each frame or the clip overwrites it.",
+    "Keep the existing measure-and-scale-to-target-height behaviour so characters match the town scale and their feet sit on the ground. The raw model coordinates are in a large unit space, so measure the loaded Box3 rather than assuming units.",
+    "The guide keeps its identifying silhouette: uniform colour treatment, the cap on the 'head' node and the flag in a hand. Attach to the 'arm-left'/'arm-right' nodes rather than to wrist bones, which no longer exist. Accessories must be scaled into the node's local space and must move with the animation.",
+    "The portrait cut-in keeps its voice-driven mouth attached to the 'head' node, sized and placed for the blocky head. Note these faces are painted into the texture and already show a mouth, so place the animated mouth over that painted area and check on a screenshot that the result reads as a mouth opening rather than a second mouth appearing.",
+    "DELETE the superseded assets and pipeline: the eight Quaternius .glb files and animations.glb in public/assets/characters/, the whole public/assets/draco/ directory, scripts/build-characters.mjs, and the @gltf-transform/* and draco3dgltf devDependencies plus the build:characters npm script. Nothing may still reference them.",
+    "The Kenney models are far cheaper than 62-bone skinned meshes - 72 triangles and 8 nodes each with no skinning - so raise the ambient pedestrian cap in src/main.js from 24 toward the original 70. Target 48, keep the existing off-screen and far-distance mixer throttling, and report what you actually measured for frame time.",
+    "Keep the procedural fallback working: if the assets fail to load the game must still start with procedural people, since this runs in classrooms on unreliable wifi.",
+    "Update .ai/capture-characters.mjs: assertions currently check for skinned character models and named bones such as 'Head'. Rewrite them for the node-based models (no skins, node names as above) while keeping everything else they verify - heights, ground contact, clip playback advancing, the pedestrian cap, portrait mouth responding to voice level, no console errors, and the fallback mode, which correctly aborts asset requests to create the failure it asserts about. Do not weaken it into a test that cannot fail.",
+    "Recapture all evidence in qa-evidence/characters/ and rewrite public/assets/characters/README.md for the Kenney source and CC0 licence.",
+    "Append a DESIGN_DECISIONS.md entry: what changed, that the blocky style was chosen deliberately, the payload and performance win, and that fantasy characters appear rarely among ambient pedestrians only. Update CURRENT_STATE.md."
   ],
 
   "constraints": [
-    "Do not regress anything that currently works. All 25 assertions in .ai/capture-characters.mjs pass right now and must still pass afterwards.",
-    "Do not change which models are used, the material tinting approach, the clip set, the pedestrian cap of 24, or the off-screen/far-distance mixer throttling.",
-    "Do not re-export or modify anything in public/assets/characters/.",
-    "Bone names in the loaded models have NO dots - the rig exposes Root, Body, Hips, Abdomen, Torso, Chest, Neck, Head, ShoulderL, UpperArmL, LowerArmL, WristL, Index1L..., ShoulderR, UpperArmR, LowerArmR, WristR, UpperLegL, LowerLegL, FootL, UpperLegR, LowerLegR, FootR. Looking up a dotted name like 'Wrist.L' silently returns undefined - that exact mistake was the cause of the last round of breakage, so use these names verbatim.",
-    "Meshes attached to a bone inherit that bone's world scale, so accessory sizes and offsets must be computed in bone-local space rather than reusing world-unit numbers from the procedural rig.",
-    "Do not modify unrelated systems, and do not commit, push, or alter git history."
+    "Do not keep any Quaternius model or the Draco decoder around 'just in case' - this is a replacement, and leaving 6 MB of dead assets in the repo defeats the point.",
+    "Do not commit the source zip or any FBX/OBJ from it. Only the .glb files actually used get committed.",
+    "The nine RARE characters must not leak into the guide, portrait, town local or tour group. A zombie must never be the child's own avatar.",
+    "Vite base is './' and the site deploys to GitHub Pages at a sub-path, so all asset paths must stay relative.",
+    "Keep the existing code style: ES modules, no TypeScript, purposeful comments only where the reason is non-obvious.",
+    "Do not modify unrelated systems (vehicles, terrain, roads, construction, progression, HUD, speech, recorder).",
+    "Do not commit, push, or alter git history."
   ],
 
   "startingPoints": [
+    "src/world/characterModels.js",
     "src/world/characters.js",
+    "src/systems/pedestrians.js",
     "src/systems/portrait.js",
+    "src/systems/openingScene.js",
+    "src/systems/activities.js",
+    "src/main.js",
+    "package.json",
     ".ai/capture-characters.mjs"
   ],
 
   "validation": [
     "npm run build",
-    "node .ai/capture-characters.mjs dist (all existing assertions must still pass)",
-    "Recapture qa-evidence/characters/guide-pointing.png, guide-wide-among-visitors.png, portrait-mid-speech.png and town-local-mid-speech.png so the fixes can be judged visually"
+    "node .ai/capture-characters.mjs dist",
+    "node .ai/capture-characters.mjs dist fallback",
+    "Confirm no uncaught page errors and no unexpected console errors, and that no request is made for any Draco or Quaternius asset"
   ],
 
-  "notes": "The conversion work is finished and correct - pedestrians, tourists, guide, town local and portrait are all skinned Quaternius models, the portrait keeps a working voice-driven mouth, and the landmark activity actors animate again. What is left is purely that accessories were attached to bones using offsets copied from the old procedural rig, so they land in the wrong place, and that the portrait camera was never re-framed for the new model's proportions. Judge your work from the screenshots, not just from the assertions passing - the assertions cannot see that a flag is floating next to a hand instead of in it. Look at the captured images before declaring done.",
-
-  "priorFailure": "capability",
-  "priorFailureDetail": "gemini-3.7-flash-low previously attempted this same guide-accessory work on this same file and failed on the merits, not on infrastructure: it recoloured the guide by traversing every mesh and copying one uniform colour onto every material, flattening skin, hair and eyes into a featureless silhouette, and it parented a world-unit cap mesh straight onto the scaled Head bone so it rendered as a giant disc floating above the head. It also used dotted bone names that do not exist in the loaded rig, so the flag silently never attached. This correction is precisely that class of bone-space transform work.",
+  "notes": "This replaces a conversion that was completed and deployed yesterday, so the surrounding integration - preloading during startup, per-instance instancing, off-screen and distance mixer throttling, the landmark activity actors in activities.js, the tour's mixed cast handling, and the procedural fallback - is already written and working. Reuse it; the substance of this task is swapping the asset family and deleting the skinned-mesh and Draco machinery that the new models make unnecessary. Two hard-won details from the previous round that still apply: a pose helper's node rotation is silently discarded unless it runs after mixer.update(), and accessories parented to an animated node inherit that node's scale, so their sizes and offsets must be computed in the node's local space rather than copied from world-unit numbers. Also note glTF node names reaching three.js can be sanitized - the previous cast's 'UpperArm.L' arrived as 'UpperArmL' - so verify the actual runtime names rather than trusting the file, since these names contain hyphens.",
 
   "category": "3d-graphics",
   "complexity": "hard",
   "bounded": true,
   "exploration": "local",
   "risk": "medium",
-  "expectedCost": "medium",
+  "expectedCost": "large",
   "executionStyle": "deep-reasoning"
 }

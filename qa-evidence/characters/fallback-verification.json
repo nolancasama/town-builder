@@ -1,6 +1,6 @@
 {
   "mode": "fallback",
-  "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+  "url": "http://127.0.0.1:64479/?dev=1&skipIntro=1&target=1",
   "assertions": [
     {
       "message": "game reaches the choosing phase",
@@ -154,7 +154,7 @@
   "server": {
     "kind": "static-dist",
     "root": "dist",
-    "base": "http://127.0.0.1:61347"
+    "base": "http://127.0.0.1:64479"
   },
   "startup": {
     "phase": "choosing",
@@ -188,124 +188,214 @@
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/animations.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-a.glb",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[characters] Quaternius assets unavailable; using procedural people. TypeError: Failed to fetch\n    at i (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:5983)\n    at http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:6135\n    at z1 (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:7041)\n    at Db.init (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:100946)\n    at HTMLFormElement.<anonymous> (http://127.0.0.1:61347/assets/index-DDkRx5vQ.js:3870:115635)\n    at eval (eval at evaluate (:290:30), <anonymous>:1:16)\n    at UtilityScript.evaluate (<anonymous>:292:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
-        "url": "http://127.0.0.1:61347/assets/index-DDkRx5vQ.js",
-        "line": 3869
+        "text": "[characters] Kenney assets unavailable; using procedural people. TypeError: Failed to fetch\n    at i (http://127.0.0.1:64479/assets/index-Cr-zMkap.js:3869:74070)\n    at Array.map (<anonymous>)\n    at http://127.0.0.1:64479/assets/index-Cr-zMkap.js:3869:74374\n    at P1 (http://127.0.0.1:64479/assets/index-Cr-zMkap.js:3869:75004)\n    at Tb.init (http://127.0.0.1:64479/assets/index-Cr-zMkap.js:3869:168830)\n    at HTMLFormElement.<anonymous> (http://127.0.0.1:64479/assets/index-Cr-zMkap.js:3869:183519)\n    at eval (eval at evaluate (:290:30), <anonymous>:1:16)\n    at UtilityScript.evaluate (<anonymous>:292:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+        "url": "http://127.0.0.1:64479/assets/index-Cr-zMkap.js",
+        "line": 3868
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/m_casual.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-b.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/m_hoodie.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-e.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/m_suit.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-f.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/m_worker.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-i.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/f_casual.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-j.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/f_formal.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-k.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/f_suit.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-m.glb",
         "line": 0
       },
       {
         "type": "error",
         "text": "Failed to load resource: net::ERR_FAILED",
-        "url": "http://127.0.0.1:61347/assets/characters/f_worker.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-q.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-c.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-d.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-g.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-h.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-l.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-n.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-o.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-p.glb",
+        "line": 0
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: net::ERR_FAILED",
+        "url": "http://127.0.0.1:64479/assets/characters/character-r.glb",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x7d5c010b0e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:64479/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x7d5c010b0e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:64479/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x7d5c010b0e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "url": "http://127.0.0.1:64479/?dev=1&skipIntro=1&target=1",
         "line": 0
       },
       {
         "type": "warning",
-        "text": "[.WebGL-0x196c01312a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
-        "url": "http://127.0.0.1:61347/?dev=1&skipIntro=1&target=1",
+        "text": "[.WebGL-0x7d5c010b0e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+        "url": "http://127.0.0.1:64479/?dev=1&skipIntro=1&target=1",
         "line": 0
       }
     ],
     "pageErrors": [],
     "characterRequestFailures": [
       {
-        "url": "http://127.0.0.1:61347/assets/characters/animations.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-a.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/m_casual.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-b.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/m_hoodie.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-e.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/m_suit.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-f.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/m_worker.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-i.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/f_casual.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-j.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/f_formal.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-k.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/f_suit.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-m.glb",
         "error": "net::ERR_FAILED"
       },
       {
-        "url": "http://127.0.0.1:61347/assets/characters/f_worker.glb",
+        "url": "http://127.0.0.1:64479/assets/characters/character-q.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-c.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-d.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-g.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-h.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-l.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-n.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-o.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-p.glb",
+        "error": "net::ERR_FAILED"
+      },
+      {
+        "url": "http://127.0.0.1:64479/assets/characters/character-r.glb",
         "error": "net::ERR_FAILED"
       }
     ],

@@ -42,7 +42,7 @@ class/zone/occupancy checks. Live: 41 road segments, 37 houses and shops,
 9 of 9 rice-field sites placed, `WORLD` at 290 / 136 / 150.
 
 **NPC character assets.** Ambient pedestrians and guided-tour visitors use
-eight rigged Quaternius glTF characters with per-instance skin, hair and
+eight rigged Kenney glTF characters with per-instance skin, hair and
 clothing variation, driven by one shared Idle/Idle_Neutral/Walk/Run/Wave
 animation asset.
 `npm run build:characters` regenerates the compact Draco-compressed GLBs

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PALETTE as P, mat, glow, box, sphere, cylinder, roundedBox, mesh } from '../core/materials.js';
 import { makePerson } from './pedestrians.js';
+import { CLIP } from '../world/characterModels.js';
 import { makeCar, makeBicycle } from '../world/props.js';
 
 /**
@@ -55,7 +56,7 @@ export function createActivityDirector({ rng, particles, audio, pedestrians, cam
   function stride(person, dt, speed, moving = true) {
     if (person.userData.isCharacterModel) {
       const data = person.userData;
-      data.playAnimation(moving ? 'Walk' : data.idleClip, {
+      data.playAnimation(moving ? CLIP.walk : data.idleClip, {
         timeScale: moving ? speed / 1.9 : 1,
       });
       data.updateAnimation(dt);

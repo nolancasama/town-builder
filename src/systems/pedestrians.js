@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PALETTE as P, mat, roundedBox, box, sphere, mesh } from '../core/materials.js';
 import { LANDMARK_LOTS } from '../config/town.js';
 import { Occupancy } from '../world/scenery.js';
-import { createCharacterModel } from '../world/characterModels.js';
+import { CLIP, createCharacterModel } from '../world/characterModels.js';
 
 /**
  * PEDESTRIANS
@@ -25,8 +25,8 @@ const SIDEWALK_OFFSET_MAX = 1.9;
 const DOOR_CLEARANCE = 0.48;
 const RETIREMENT_EXIT_DISTANCE = 24;
 
-export function makePerson(rng, { camera = null } = {}) {
-  const character = createCharacterModel(rng, { camera });
+export function makePerson(rng, { camera = null, allowRare = false } = {}) {
+  const character = createCharacterModel(rng, { camera, allowRare });
   if (character) return character;
 
   const g = new THREE.Group();
@@ -218,7 +218,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
     let p = pool.pop();
     if (!p) {
       if (active.length >= max) return null;
-      p = { group: makePerson(rng), speed: 0, state: 'walking' };
+      p = { group: makePerson(rng, { camera, allowRare: true }), speed: 0, state: 'walking' };
       root.add(p.group);
     }
     // Placement happens before visibility is restored, so a pooled walker can
@@ -569,7 +569,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
   function animateWalk(p, dt, moving) {
     if (p.group.userData.isCharacterModel) {
       const data = p.group.userData;
-      data.playAnimation(moving ? 'Walk' : data.idleClip, {
+      data.playAnimation(moving ? CLIP.walk : data.idleClip, {
         timeScale: moving ? p.speed / 1.9 : 1,
       });
 

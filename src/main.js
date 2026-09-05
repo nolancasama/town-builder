@@ -127,7 +127,7 @@ class Game {
     this.rig = createCameraRig(this.camera, this.renderer.domElement);
     this.particles = createParticles(this.scene);
     this.pedestrians = createPedestrians(this.scene, this.world.graph, this.rng, {
-      max: 24,
+      max: 48,
       camera: this.camera,
     });
     this.vehicles = createVehicles(this.scene, this.world.graph, this.rng, { maxCars: 16, maxBikes: 10 });

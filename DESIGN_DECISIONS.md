@@ -55,3 +55,31 @@ head and body motion. The portrait guide is the deliberate exception: it uses
 the same skinned appearance as the world avatar but adds a simple mouth attached
 to the Head bone, because this close-up is shown specifically while the child's
 recorded speech plays and the speech must read on the face.
+
+## 2026-09-06 - Blocky Kenney cast replaces the Quaternius one
+
+Every NPC now uses Kenney's Blocky Characters 2.0 (CC0) instead of the
+Quaternius cast adopted the day before. The blocky look sits closer to the
+toy-town buildings than the semi-realistic figures did, and it is a better fit
+for elementary classrooms.
+
+The technical case was decisive. These models are node-animated rather than
+skinned: seven nodes and 72 triangles each, against a 62-bone skeleton and
+5,776 triangles. That removed the skinned-mesh path, the Draco decoder and the
+whole glTF conversion pipeline - the files are shipped exactly as downloaded -
+and cut the character payload from 6.2 MB to about 2.3 MB, which matters on
+school wifi. With the per-person cost that much lower, the ambient pedestrian
+cap went back up from 24 to 48.
+
+Their `head`, `arm-left/right` and `leg-left/right` nodes are what the original
+procedural pose helpers already drove, so pointing and head-turning went back to
+being direct node rotations.
+
+Nine ordinary townspeople form the common cast. The pack's costumed characters -
+zombie, orcs, robot knights, ninja, vampire, pirate - appear as roughly one
+ambient pedestrian in twelve, as a surprise on the street, and are never cast as
+the guide, the portrait or the opening local: the child's own avatar is always
+an ordinary person.
+
+Accepted trade-off: this set is heavily male-presenting, so the crowd reads less
+mixed than the Quaternius cast did.

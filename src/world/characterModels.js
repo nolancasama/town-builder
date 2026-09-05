@@ -1,44 +1,39 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
-const CHARACTER_FILES = [
-  ['m_casual', 'm_casual.glb'],
-  ['m_hoodie', 'm_hoodie.glb'],
-  ['m_suit', 'm_suit.glb'],
-  ['m_worker', 'm_worker.glb'],
-  ['f_casual', 'f_casual.glb'],
-  ['f_formal', 'f_formal.glb'],
-  ['f_suit', 'f_suit.glb'],
-  ['f_worker', 'f_worker.glb'],
-];
+/**
+ * CHARACTER MODELS
+ * ----------------
+ * Kenney "Blocky Characters 2.0" (CC0). Each file is a seven-node hierarchy -
+ * root, torso, head, two arms, two legs - animated by node transforms rather
+ * than a skeleton, so there is no skinning, no bone palette and no Draco
+ * decoder to ship. Every file carries its own copy of the shared clip set.
+ *
+ * Ordinary townspeople make up the common cast. The costumed characters - a
+ * zombie, orcs, robot knights, a ninja, a vampire, a pirate - are drawn rarely
+ * and only for ambient street pedestrians, never for the child's own avatar.
+ */
 
-const SKIN_TONES = [0xf7d9bd, 0xf0c9a0, 0xdaa87a, 0xb07a4e, 0x8a5a34, 0x5f3a20, 0x412718];
-const HAIR_COLOURS = [0x171514, 0x2b211c, 0x4a3728, 0x6b4a2f, 0xa06b3d, 0xd1ad61, 0x77716c];
-const CLOTHING_COLOURS = [
-  0x39557a, 0x4a90d9, 0x57c07b, 0xe05c4b, 0xf4a259, 0xffd166,
-  0x9b7ede, 0x2f7f9e, 0x6b7c8c, 0xb86f52, 0xe6a5b1, 0xede5d4,
-];
-const CLOTHING_MATERIALS = new Set([
-  'white', 'grey', 'gray', 'brown', 'orange', 'red', 'blue', 'green',
-  'yellow', 'purple', 'pink', 'navy', 'black', 'gold', 'lightblue',
-  'limegreen', 'darkbrown', 'lightbrown', 'brown2', 'brown_02', 'red_dark',
-  'shirt', 'pants', 'trousers', 'jacket', 'hoodie', 'suit', 'overalls',
-  'clothes', 'clothing', 'tie',
-]);
-// Safety gear reads as safety gear precisely because it is never recoloured.
-const UNIFORM_MATERIALS = new Set(['worker_vest', 'worker_yellow']);
-const MODEL_HAIR_MATERIALS = {
-  m_worker: new Set(['moustache']),
-  f_formal: new Set(['lightbrown']),
-  f_worker: new Set(['brown', 'darkbrown']),
+const COMMON_KEYS = ['a', 'b', 'e', 'f', 'i', 'j', 'k', 'm', 'q'];
+const RARE_KEYS = ['c', 'd', 'g', 'h', 'l', 'n', 'o', 'p', 'r'];
+const ALL_KEYS = [...COMMON_KEYS, ...RARE_KEYS];
+
+/** Roughly one passer-by in twelve is a surprise. */
+const RARE_CHANCE = 1 / 12;
+
+export const CLIP = {
+  idle: 'idle',
+  walk: 'walk',
+  run: 'sprint',
+  cheer: 'emote-yes',
 };
+const REQUIRED_CLIPS = [CLIP.idle, CLIP.walk, CLIP.run, CLIP.cheer];
+
+/** Matches the procedural people these replaced, so the town scale is unchanged. */
 const TARGET_HEIGHT = 1.95;
 
 let preloadPromise = null;
 let sources = null;
-let clips = null;
 
 function publicPath(path) {
   return `${import.meta.env.BASE_URL || './'}${path}`;
@@ -52,160 +47,108 @@ function range(rng, min, max) {
   return rng?.range ? rng.range(min, max) : min + Math.random() * (max - min);
 }
 
-function tintKind(name = '', modelKey = '') {
-  const normalized = name.toLowerCase().replace(/[ .-]+/g, '_');
-  if (UNIFORM_MATERIALS.has(normalized)) return null;
-  if (normalized === 'skin_darker') return 'skinShadow';
-  if (normalized.includes('skin')) return 'skin';
-  if (normalized.includes('hair') || normalized === 'eyebrows') return 'hair';
-  if (MODEL_HAIR_MATERIALS[modelKey]?.has(normalized)) return 'hair';
-  if (CLOTHING_MATERIALS.has(normalized)) return 'clothing';
-  if ([...CLOTHING_MATERIALS].some((part) => normalized.includes(`${part}_`) || normalized.endsWith(`_${part}`))) {
-    return 'clothing';
-  }
-  return null;
+function chance(rng, probability) {
+  const roll = rng?.chance ? rng.chance(probability) : Math.random() < probability;
+  return Boolean(roll);
 }
 
 /**
- * Recolour a character without flattening it. Clothing keeps each material's
- * own tone and only rotates hue, so a dark shoe stays dark and a white shirt
- * stays light while the person still reads as different from their neighbour -
- * tinting every garment one picked colour turns the crowd into mannequins.
- */
-function varyMaterials(root, rng, modelKey, {
-  clothingColor = null,
-  skinColor = null,
-  hairColor = null,
-} = {}) {
-  const skinTone = skinColor ?? pick(rng, SKIN_TONES);
-  const hairColour = hairColor ?? pick(rng, HAIR_COLOURS);
-  const hueShift = range(rng, 0, 1);
-  const neutralHue = new THREE.Color(clothingColor ?? pick(rng, CLOTHING_COLOURS));
-  const variants = new Map();
-  const hsl = {};
-  const neutralHsl = {};
-  neutralHue.getHSL(neutralHsl);
-
-  const variant = (material) => {
-    const kind = material?.color ? tintKind(material.name, modelKey) : null;
-    if (!kind) return material;
-    if (!variants.has(material)) {
-      const clone = material.clone();
-      if (kind === 'skin') {
-        clone.color.setHex(skinTone);
-      } else if (kind === 'skinShadow') {
-        clone.color.setHex(skinTone).multiplyScalar(0.82);
-      } else if (kind === 'hair') {
-        clone.color.setHex(hairColour);
-      } else {
-        clone.color.getHSL(hsl);
-        if (clothingColor !== null) {
-          clone.color.setHSL(neutralHsl.h, Math.max(hsl.s, neutralHsl.s * 0.75), hsl.l);
-        // Near-neutral garments have no hue to rotate, so lend them a soft one.
-        } else if (hsl.s < 0.12) clone.color.setHSL(neutralHsl.h, 0.16, hsl.l);
-        else clone.color.setHSL((hsl.h + hueShift) % 1, hsl.s, hsl.l);
-      }
-      variants.set(material, clone);
-    }
-    return variants.get(material);
-  };
-
-  root.traverse((object) => {
-    if (!object.isMesh) return;
-    if (Array.isArray(object.material)) object.material = object.material.map(variant);
-    else object.material = variant(object.material);
-  });
-}
-
-/**
- * Fetch and decode the shared character library once. A failed request resolves
- * to false so startup can continue with the procedural classroom-safe fallback.
+ * Fetch and decode the character library once. A failed request resolves to
+ * false so startup can continue with the procedural classroom-safe fallback.
  */
 export function preloadCharacterModels() {
   if (preloadPromise) return preloadPromise;
   preloadPromise = (async () => {
-    const draco = new DRACOLoader();
-    draco.setDecoderPath(publicPath('assets/draco/'));
-    draco.setDecoderConfig({ type: 'wasm' });
-    draco.setWorkerLimit(2);
     const loader = new GLTFLoader();
-    loader.setDRACOLoader(draco);
-
     const controller = new AbortController();
     let timeout;
     try {
-      const load = async (path) => {
+      // These .glb files reference their texture externally as
+      // "Textures/texture-<key>.png", so the parse needs the directory they sit
+      // in - passing '' leaves every character untextured white.
+      const resourcePath = publicPath('assets/characters/');
+      const load = async (key) => {
+        const path = `assets/characters/character-${key}.glb`;
         const response = await fetch(publicPath(path), {
           cache: 'force-cache',
           signal: controller.signal,
         });
         if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-        return loader.parseAsync(await response.arrayBuffer(), '');
+        return loader.parseAsync(await response.arrayBuffer(), resourcePath);
       };
-      const requests = [
-        load('assets/characters/animations.glb'),
-        ...CHARACTER_FILES.map(([, file]) => load(`assets/characters/${file}`)),
-      ];
       const deadline = new Promise((_, reject) => {
         timeout = setTimeout(() => {
           controller.abort();
           reject(new Error('Character preload timed out after 8 seconds.'));
         }, 8000);
       });
-      const loaded = await Promise.race([Promise.all(requests), deadline]);
-      const [animationAsset, ...characterAssets] = loaded;
-      clips = new Map(animationAsset.animations.map((clip) => [clip.name, clip]));
-      for (const required of ['Idle', 'Idle_Neutral', 'Walk', 'Run', 'Wave']) {
-        if (!clips.has(required)) throw new Error(`animations.glb is missing ${required}`);
-      }
+      const assets = await Promise.race([
+        Promise.all(ALL_KEYS.map(load)),
+        deadline,
+      ]);
 
       sources = new Map();
-      CHARACTER_FILES.forEach(([key], index) => {
-        const scene = characterAssets[index].scene;
+      ALL_KEYS.forEach((key, index) => {
+        const asset = assets[index];
+        const clips = new Map(asset.animations.map((clip) => [clip.name, clip]));
+        for (const required of REQUIRED_CLIPS) {
+          if (!clips.has(required)) throw new Error(`character-${key} is missing the ${required} clip`);
+        }
+        const scene = asset.scene;
         scene.updateMatrixWorld(true);
         const bounds = new THREE.Box3().setFromObject(scene);
         const height = bounds.max.y - bounds.min.y;
-        if (!Number.isFinite(height) || height <= 0) throw new Error(`${key} has invalid bounds`);
+        if (!Number.isFinite(height) || height <= 0) throw new Error(`character-${key} has invalid bounds`);
         scene.traverse((object) => {
           if (!object.isMesh) return;
           object.castShadow = false;
           object.receiveShadow = false;
         });
-        sources.set(key, { scene, bounds, height });
+        sources.set(key, { scene, clips, bounds, height });
       });
       return true;
     } catch (error) {
       controller.abort();
       sources = null;
-      clips = null;
-      console.warn('[characters] Quaternius assets unavailable; using procedural people.', error);
+      console.warn('[characters] Kenney assets unavailable; using procedural people.', error);
       return false;
     } finally {
       clearTimeout(timeout);
-      draco.dispose();
     }
   })();
   return preloadPromise;
 }
 
 export function characterModelsReady() {
-  return Boolean(sources && clips);
+  return Boolean(sources);
 }
 
-/** Return a skinned, independently animated instance from the preloaded cache. */
+function chooseKey(rng, { model, allowRare }) {
+  if (model && sources.has(model)) return model;
+  if (allowRare && chance(rng, RARE_CHANCE)) return pick(rng, RARE_KEYS);
+  return pick(rng, COMMON_KEYS);
+}
+
+/**
+ * An independently animated instance from the preloaded cache.
+ *
+ * @param allowRare only ambient street pedestrians opt in - the guide, the
+ * portrait, the opening local and the tour group stay ordinary people.
+ */
 export function createCharacterModel(rng, {
   model = null,
   camera = null,
-  clothingColor = null,
-  skinColor = null,
-  hairColor = null,
+  allowRare = false,
 } = {}) {
-  if (!sources || !clips) return null;
-  const key = model && sources.has(model) ? model : pick(rng, CHARACTER_FILES)[0];
+  if (!sources) return null;
+  const key = chooseKey(rng, { model, allowRare });
   const source = sources.get(key);
+
   const character = new THREE.Group();
   const content = new THREE.Group();
-  const clonedScene = SkeletonUtils.clone(source.scene);
+  // Plain clone: without a skeleton there is nothing for SkeletonUtils to rebind,
+  // and sharing geometry and materials by reference is what keeps a crowd cheap.
+  const clonedScene = source.scene.clone(true);
   const targetHeight = TARGET_HEIGHT * range(rng, 0.96, 1.04);
   const scale = targetHeight / source.height;
   const centre = source.bounds.getCenter(new THREE.Vector3());
@@ -216,7 +159,6 @@ export function createCharacterModel(rng, {
   content.position.z = -centre.z * scale;
   content.add(clonedScene);
   character.add(content);
-  varyMaterials(clonedScene, rng, key, { clothingColor, skinColor, hairColor });
 
   const mixer = new THREE.AnimationMixer(character);
   let currentAction = null;
@@ -224,12 +166,12 @@ export function createCharacterModel(rng, {
   let animationAccumulator = 0;
   const actions = new Map();
   const actionFor = (name) => {
-    if (!actions.has(name)) actions.set(name, mixer.clipAction(clips.get(name)));
+    if (!actions.has(name)) actions.set(name, mixer.clipAction(source.clips.get(name)));
     return actions.get(name);
   };
 
   const play = (name, { fade = 0.18, timeScale = 1 } = {}) => {
-    if (!clips.has(name)) return false;
+    if (!source.clips.has(name)) return false;
     if (currentName === name) {
       currentAction.setEffectiveTimeScale(timeScale);
       return true;
@@ -243,7 +185,12 @@ export function createCharacterModel(rng, {
     return true;
   };
 
-  const idleClip = pick(rng, ['Idle', 'Idle_Neutral']);
+  // Some clips carry root translation - character j's walk lifts it 0.18m, which
+  // reads as floating above the pavement. The game owns where a person stands,
+  // so the clip only gets to rotate the root, never move it.
+  const rootNode = clonedScene.getObjectByName('root');
+  const rootRest = rootNode ? rootNode.position.clone() : null;
+
   const animationPoint = new THREE.Vector3();
   const updateAnimation = (dt) => {
     animationAccumulator = Math.min(0.2, animationAccumulator + dt);
@@ -258,24 +205,33 @@ export function createCharacterModel(rng, {
       if (!onScreen || (far && animationAccumulator < 0.1)) return;
     }
     mixer.update(animationAccumulator);
+    if (rootRest) rootNode.position.copy(rootRest);
     animationAccumulator = 0;
   };
-  character.name = `quaternius-${key}`;
+
+  character.name = `kenney-character-${key}`;
   character.userData = {
     ...character.userData,
     isCharacterModel: true,
     modelKey: key,
+    isRareCharacter: RARE_KEYS.includes(key),
     mixer,
-    head: character.getObjectByName('Head'),
+    head: clonedScene.getObjectByName('head'),
+    armLeft: clonedScene.getObjectByName('arm-left'),
+    armRight: clonedScene.getObjectByName('arm-right'),
+    torso: clonedScene.getObjectByName('torso'),
     baseY: 0.3,
-    idleClip,
+    idleClip: CLIP.idle,
     playAnimation: play,
     updateAnimation,
     currentAnimation: () => currentName,
   };
-  play(idleClip, { fade: 0 });
+  play(CLIP.idle, { fade: 0 });
   mixer.update(0);
+  if (rootRest) rootNode.position.copy(rootRest);
   return character;
 }
 
-export const CHARACTER_MODEL_KEYS = CHARACTER_FILES.map(([key]) => key);
+export const CHARACTER_MODEL_KEYS = ALL_KEYS;
+export const COMMON_MODEL_KEYS = COMMON_KEYS;
+export const RARE_MODEL_KEYS = RARE_KEYS;
