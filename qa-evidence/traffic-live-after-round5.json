@@ -1,0 +1,116 @@
+{
+  "label": "traffic-live-after-round5",
+  "setup": {
+    "landmarks": [
+      "school",
+      "library",
+      "hospital",
+      "park"
+    ],
+    "pedestrians": 70,
+    "vehicles": 26
+  },
+  "measurement": {
+    "sampleMs": 500,
+    "durationMs": 45000,
+    "stationaryDistance": 0.08,
+    "samples": 90,
+    "worstByCause": {
+      "ped:visiting": 7,
+      "ped:idle": 3.5,
+      "ped:walking": 2,
+      "car:YIELDING": 2,
+      "bike:YIELDING": 2.5,
+      "ped:YIELDING": 1.5,
+      "car:driving-or-stopTimer": 1.5,
+      "bike:driving-or-stopTimer": 1.5,
+      "ped:returning": 0.5,
+      "ped:toEntrance": 0.5
+    },
+    "worstDetails": {
+      "ped:visiting": {
+        "uuid": "51e0c831-de52-4ec5-8355-d2da60c33165",
+        "x": 13.676487336847753,
+        "z": 23.953902407062543,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      },
+      "ped:idle": {
+        "uuid": "317cd3b1-fcb2-4b3e-ba03-fd75b488d3bc",
+        "x": -14,
+        "z": 32.5003294330556,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      },
+      "ped:walking": {
+        "uuid": "f14b0f7b-a187-411f-9742-47abd47547dc",
+        "x": -2.226160377610155,
+        "z": 5.750501151196659,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      },
+      "car:YIELDING": {
+        "uuid": "59cc9216-3d2d-4d2b-a7f5-3cb98af5a770",
+        "x": -26.757231649415317,
+        "z": 29.5,
+        "speed": 0.11270035001437306,
+        "trafficYieldTime": 1.5845999999940394,
+        "trafficPriorityDistance": 0
+      },
+      "bike:YIELDING": {
+        "uuid": "3dfd335e-1212-41fa-bd86-53fbb04a660e",
+        "x": -27.65,
+        "z": -28.830169058037917,
+        "speed": 0.03241959231261466,
+        "trafficYieldTime": 1.4077000000178814,
+        "trafficPriorityDistance": 0
+      },
+      "ped:YIELDING": {
+        "uuid": "63ec7fc2-d33d-49ea-b626-d3fc9f767bfe",
+        "x": -3.0990874222945424,
+        "z": -22.183347177534433,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      },
+      "car:driving-or-stopTimer": {
+        "uuid": "56b542fb-70ba-4c3b-b34f-b0ec73b6c107",
+        "x": -31.5,
+        "z": 45.381980527164735,
+        "speed": 0.0006740283201963266,
+        "trafficYieldTime": 0,
+        "trafficPriorityDistance": 0
+      },
+      "bike:driving-or-stopTimer": {
+        "uuid": "3dfd335e-1212-41fa-bd86-53fbb04a660e",
+        "x": -56.70742139384438,
+        "z": -35.06261992526374,
+        "speed": 0.6286480136563942,
+        "trafficYieldTime": 0,
+        "trafficPriorityDistance": 0
+      },
+      "ped:returning": {
+        "uuid": "b89b7bab-28cf-469e-b6bd-ffd689d9f553",
+        "x": 13.69309150746871,
+        "z": 23.938638991848144,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      },
+      "ped:toEntrance": {
+        "uuid": "99b5b029-f396-4d5d-b2c7-6ee378089e03",
+        "x": -34.684394300092855,
+        "z": -0.3859030226819879,
+        "speed": null,
+        "trafficYieldTime": null,
+        "trafficPriorityDistance": null
+      }
+    },
+    "minimumSeparation": 1.5340493670664817,
+    "penetrationSamples": 0
+  },
+  "errors": []
+}

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PALETTE as P, mat, box, mesh } from '../core/materials.js';
 import { WORLD, PADDY_FIELDS, CHANNELS } from '../config/town.js';
 import { RICE_MAT } from './props.js';
+import { SIDEWALK_BY_CLASS } from './roads.js';
 
 /**
  * TERRAIN
@@ -86,19 +87,116 @@ export function createTerrain(scene) {
  * Rice paddies
  * ------------------------------------------------------------------ */
 
+function pointToRectDistanceSq(x, z, minX, maxX, minZ, maxZ) {
+  const dx = x < minX ? minX - x : (x > maxX ? x - maxX : 0);
+  const dz = z < minZ ? minZ - z : (z > maxZ ? z - maxZ : 0);
+  return dx * dx + dz * dz;
+}
+
+function pointToSegmentDistanceSq(x, z, ax, az, bx, bz) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const lengthSq = dx * dx + dz * dz;
+  const t = lengthSq > 0
+    ? THREE.MathUtils.clamp(((x - ax) * dx + (z - az) * dz) / lengthSq, 0, 1)
+    : 0;
+  const sx = ax + dx * t;
+  const sz = az + dz * t;
+  return (x - sx) ** 2 + (z - sz) ** 2;
+}
+
+/** Exact squared distance between a finite road centre-line and an AABB. */
+function segmentToRectDistanceSq(ax, az, bx, bz, minX, maxX, minZ, maxZ) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  let lo = 0;
+  let hi = 1;
+
+  // A slab intersection means the segment passes through the rectangle.
+  for (const [p, v, min, max] of [[ax, dx, minX, maxX], [az, dz, minZ, maxZ]]) {
+    if (Math.abs(v) < 1e-10) {
+      if (p < min || p > max) {
+        lo = 1;
+        hi = 0;
+        break;
+      }
+      continue;
+    }
+    let t0 = (min - p) / v;
+    let t1 = (max - p) / v;
+    if (t0 > t1) [t0, t1] = [t1, t0];
+    lo = Math.max(lo, t0);
+    hi = Math.min(hi, t1);
+  }
+  if (lo <= hi) return 0;
+
+  // With no intersection, the closest pair contains either a segment endpoint
+  // or a rectangle corner. Cover both cases so diagonal corner clearance is
+  // measured exactly rather than sampled.
+  return Math.min(
+    pointToRectDistanceSq(ax, az, minX, maxX, minZ, maxZ),
+    pointToRectDistanceSq(bx, bz, minX, maxX, minZ, maxZ),
+    pointToSegmentDistanceSq(minX, minZ, ax, az, bx, bz),
+    pointToSegmentDistanceSq(maxX, minZ, ax, az, bx, bz),
+    pointToSegmentDistanceSq(maxX, maxZ, ax, az, bx, bz),
+    pointToSegmentDistanceSq(minX, maxZ, ax, az, bx, bz)
+  );
+}
+
+/** Test the complete paddy footprint, including its outer bunds. */
+export function paddyPlotBlocked(occupancy, x, z, w, d) {
+  if (!occupancy) return false;
+  const minX = x - w / 2;
+  const maxX = x + w / 2;
+  const minZ = z - d / 2;
+  const maxZ = z + d / 2;
+
+  // All four corners must remain on the authored flat terrain.
+  const flatLimit = WORLD.flatRadius - 2;
+  if ([[minX, minZ], [maxX, minZ], [maxX, maxZ], [minX, maxZ]]
+    .some(([cx, cz]) => Math.hypot(cx, cz) > flatLimit)) return true;
+
+  // Road surfaces are finite centre-line segments widened by their
+  // carriageway and class-specific sidewalk. A rectangle/capsule distance
+  // test catches diagonal corner strikes that the former centre-circle missed.
+  for (const edge of occupancy.graph?.edges || []) {
+    const sidewalk = SIDEWALK_BY_CLASS[edge.cls] || SIDEWALK_BY_CLASS.minor;
+    const surfaceRadius = edge.width / 2 + sidewalk;
+    const distanceSq = segmentToRectDistanceSq(
+      edge.a.pos.x, edge.a.pos.y, edge.b.pos.x, edge.b.pos.y,
+      minX, maxX, minZ, maxZ
+    );
+    if (distanceSq <= surfaceRadius * surfaceRadius + 1e-8) return true;
+  }
+
+  // Paddy cells and the existing reservations are axis-aligned at this stage.
+  for (const reserved of occupancy.rects || []) {
+    if (maxX > reserved.x - reserved.hw && minX < reserved.x + reserved.hw
+      && maxZ > reserved.z - reserved.hd && minZ < reserved.z + reserved.hd) return true;
+  }
+  return false;
+}
+
 /**
  * Paddies are a water slab, a raised earth bund, and one instanced mesh of rice
  * shoots per field. The shoots use the shared sway material, so the whole
  * countryside ripples for the cost of a single uniform update.
  */
-export function createPaddies(scene, rng, isBlocked) {
+export function createPaddies(scene, rng, occupancy) {
   const group = new THREE.Group();
   group.name = 'paddies';
+  // Keep the committed plot footprints available for deterministic QA. These
+  // are the plots that actually rendered, not the nominal field rectangles.
+  group.userData.plotRects = [];
   const waterMat = mat(P.paddyWater);
   const bundMat = mat(P.paddyMud);
   let riceCount = 0;
   const riceTransforms = [];
+  const committedPlots = [];
 
+  // Decide the complete patchwork against the pre-paddy occupancy snapshot.
+  // Reserving as we iterate would make one paddy cell accidentally suppress
+  // an adjacent cell in the same authored field.
   for (const field of PADDY_FIELDS) {
     const [cx, cz] = field.pos;
     const [w, d] = field.size;
@@ -112,26 +210,36 @@ export function createPaddies(scene, rng, isBlocked) {
       for (let r = 0; r < rows; r++) {
         const px = cx - w / 2 + pw * (c + 0.5);
         const pz = cz - d / 2 + pd * (r + 0.5);
-        if (isBlocked && isBlocked(px, pz, Math.max(pw, pd) * 0.45)) continue;
+        if (paddyPlotBlocked(occupancy, px, pz, pw, pd)) continue;
+        committedPlots.push({ x: px, z: pz, w: pw, d: pd });
+      }
+    }
+  }
 
-        const iw = pw - 1.2;
-        const id = pd - 1.2;
-        group.add(mesh(box(iw, 0.3, id), waterMat, { x: px, y: 0.02, z: pz, cast: false }));
-        // bund
-        group.add(mesh(box(pw, 0.42, 0.9), bundMat, { x: px, y: 0.16, z: pz - pd / 2, cast: false }));
-        group.add(mesh(box(pw, 0.42, 0.9), bundMat, { x: px, y: 0.16, z: pz + pd / 2, cast: false }));
-        group.add(mesh(box(0.9, 0.42, pd), bundMat, { x: px - pw / 2, y: 0.16, z: pz, cast: false }));
-        group.add(mesh(box(0.9, 0.42, pd), bundMat, { x: px + pw / 2, y: 0.16, z: pz, cast: false }));
+  for (const plot of committedPlots) {
+    const { x: px, z: pz, w: pw, d: pd } = plot;
+    const iw = pw - 1.2;
+    const id = pd - 1.2;
+    group.add(mesh(box(iw, 0.3, id), waterMat, { x: px, y: 0.02, z: pz, cast: false }));
+    // bund
+    group.add(mesh(box(pw, 0.42, 0.9), bundMat, { x: px, y: 0.16, z: pz - pd / 2, cast: false }));
+    group.add(mesh(box(pw, 0.42, 0.9), bundMat, { x: px, y: 0.16, z: pz + pd / 2, cast: false }));
+    group.add(mesh(box(0.9, 0.42, pd), bundMat, { x: px - pw / 2, y: 0.16, z: pz, cast: false }));
+    group.add(mesh(box(0.9, 0.42, pd), bundMat, { x: px + pw / 2, y: 0.16, z: pz, cast: false }));
 
-        // rice shoots in rows
-        const stepX = 1.35;
-        const stepZ = 1.35;
-        for (let x = -iw / 2 + 0.7; x < iw / 2 - 0.4; x += stepX) {
-          for (let z = -id / 2 + 0.7; z < id / 2 - 0.4; z += stepZ) {
-            riceTransforms.push([px + x + rng.range(-0.15, 0.15), pz + z + rng.range(-0.15, 0.15), rng.range(0.7, 1.15)]);
-            riceCount++;
-          }
-        }
+    // Reserve only this committed patchwork cell. Later scenery and tree
+    // passes can still use any field cell skipped above because of a road
+    // or landmark lot.
+    occupancy?.addRect(px, pz, pw, pd);
+    group.userData.plotRects.push(plot);
+
+    // rice shoots in rows
+    const stepX = 1.35;
+    const stepZ = 1.35;
+    for (let x = -iw / 2 + 0.7; x < iw / 2 - 0.4; x += stepX) {
+      for (let z = -id / 2 + 0.7; z < id / 2 - 0.4; z += stepZ) {
+        riceTransforms.push([px + x + rng.range(-0.15, 0.15), pz + z + rng.range(-0.15, 0.15), rng.range(0.7, 1.15)]);
+        riceCount++;
       }
     }
   }

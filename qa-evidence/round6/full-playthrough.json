@@ -1,0 +1,30 @@
+{
+  "phase": "guided-end",
+  "built": [
+    "house",
+    "gym",
+    "cafe",
+    "gasStation",
+    "fire",
+    "park",
+    "police",
+    "hospital",
+    "bookstore",
+    "library"
+  ],
+  "takenLots": [
+    "small-center-west",
+    "medium-center-south",
+    "small-center-east",
+    "medium-west-north",
+    "medium-northwest",
+    "large-center-north",
+    "medium-northeast",
+    "medium-southwest",
+    "small-northwest",
+    "large-center-south"
+  ],
+  "sidewalks": 10,
+  "skippedTourStops": 10,
+  "errors": []
+}

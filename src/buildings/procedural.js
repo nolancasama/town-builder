@@ -3,6 +3,8 @@ import {
   PALETTE as P, mat, glow, roundedBox, box, cylinder, sphere, mesh, signPlane,
 } from '../core/materials.js';
 import { makeTree, makeBush, makeBench, makeFenceRun, makeCar, makeStreetLamp, gableRoof, hipRoof } from '../world/props.js';
+import { WORLD, LANDMARK_LOTS, ROAD_SEGMENTS, ROAD_WIDTH, RAILWAY } from '../config/town.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 /**
  * PROCEDURAL LANDMARK MODELS
@@ -108,16 +110,10 @@ export function buildSchool({ size, sign, rng }) {
 
   facadeSign(g, sign, { w: 5.5, h: 0.9, y: 5.1, z: bz + bodyD / 2 + 2.9 });
 
-  // schoolyard: dirt ground, running track ring, goal posts
+  // schoolyard: leave the compact dirt play area uncluttered. The former flat
+  // terracotta ring was too small to read as a running track at town scale.
   const yard = mesh(box(lw - 3, 0.14, ld - bodyD - 6), mat(0xd8c39a), { y: 0.09, z: 3.5, cast: false });
   g.add(yard);
-  const track = new THREE.Mesh(
-    new THREE.RingGeometry(4.6, 6.2, 32),
-    new THREE.MeshLambertMaterial({ color: 0xc06a4e })
-  );
-  track.rotation.x = -Math.PI / 2;
-  track.position.set(0, 0.18, 3.5);
-  g.add(track);
 
   // fence around the lot with a gate at the front
   const fenceColor = 0x9fb3c8;
@@ -192,26 +188,26 @@ export function buildLibrary({ size, sign, rng }) {
   facadeSign(g, sign, { w: 5.6, h: 1, y: h + 0.6, z: front - 1.15 });
 
   // wide steps and a low balustrade
-  steps(g, { w: w * 0.55, depth: 2.2, count: 4, z: front + 0.4 });
+  steps(g, { w: w * 0.55, depth: 2.2, count: 4, z: front - 0.5 });
   for (const sx of [-1, 1]) {
-    g.add(mesh(box(0.5, 1.1, 3.4), mat(P.concrete), { x: sx * w * 0.3, y: 0.55, z: front + 1.3 }));
-    g.add(mesh(sphere(0.42, 8, 6), mat(P.concrete), { x: sx * w * 0.3, y: 1.35, z: front + 1.3 }));
+    g.add(mesh(box(0.5, 1.1, 3.4), mat(P.concrete), { x: sx * w * 0.3, y: 0.55, z: front + 0.3 }));
+    g.add(mesh(sphere(0.42, 8, 6), mat(P.concrete), { x: sx * w * 0.3, y: 1.35, z: front + 0.3 }));
   }
 
   // a giant book sculpture by the door - a friendly visual cue
-  const bookA = mesh(box(2.2, 0.3, 1.5), mat(P.red), { x: -w * 0.42, y: 1.05, z: front + 2.2 });
+  const bookA = mesh(box(2.2, 0.3, 1.5), mat(P.red), { x: -w * 0.38, y: 1.05, z: front + 0.8 });
   bookA.rotation.z = 0.12;
-  const bookB = mesh(box(2.2, 0.3, 1.5), mat(P.blue), { x: -w * 0.42, y: 1.35, z: front + 2.2 });
+  const bookB = mesh(box(2.2, 0.3, 1.5), mat(P.blue), { x: -w * 0.38, y: 1.35, z: front + 0.8 });
   bookB.rotation.z = -0.1;
   g.add(bookA, bookB);
 
   for (let i = 0; i < 2; i++) {
     const t = makeTree(rng, { scale: 0.85 });
-    t.position.set((i ? 1 : -1) * (w / 2 + 1.5), 0, front + 1.5);
+    t.position.set((i ? 1 : -1) * (lw / 2 - 3), 0, front + 0.2);
     g.add(t);
   }
   const bench = makeBench(rng);
-  bench.position.set(w * 0.38, 0, front + 2.4);
+  bench.position.set(w * 0.34, 0, front + 0.8);
   bench.rotation.y = Math.PI;
   g.add(bench);
   return g;
@@ -258,19 +254,19 @@ export function buildHospital({ size, sign, rng }) {
 
   // ambulance bay: canopy, marked apron, an ambulance parked under it
   const bayX = lw / 2 - 5;
-  const canopy = mesh(box(9, 0.4, 7), mat(P.concrete), { x: bayX, y: 4.4, z: 9 });
+  const canopy = mesh(box(9, 0.4, 4), mat(P.concrete), { x: bayX, y: 4.4, z: 6.2 });
   g.add(canopy);
-  for (const sz of [6.2, 11.8]) {
+  for (const sz of [4.5, 7.9]) {
     g.add(mesh(cylinder(0.24, 0.24, 4.4, 8), mat(P.metalDark), { x: bayX + 3.8, y: 2.2, z: sz }));
   }
-  g.add(mesh(box(9, 0.14, 7), mat(0xcfd6dd), { x: bayX, y: 0.09, z: 9, cast: false }));
+  g.add(mesh(box(9, 0.14, 4), mat(0xcfd6dd), { x: bayX, y: 0.09, z: 6.2, cast: false }));
   const ambulance = makeCar(rng);
-  ambulance.position.set(bayX, 0, 9);
+  ambulance.position.set(bayX, 0, 6);
   ambulance.rotation.y = Math.PI / 2;
   g.add(ambulance);
-  g.add(mesh(box(1.6, 0.5, 0.12), crossMat, { x: bayX, y: 5.05, z: 12.45, cast: false }));
+  g.add(mesh(box(1.6, 0.5, 0.12), crossMat, { x: bayX, y: 5.05, z: 8.15, cast: false }));
 
-  steps(g, { w: 5, depth: 1.8, count: 2, z: 7.9 });
+  steps(g, { w: 5, depth: 1.8, count: 2, z: 7.2 });
   g.add(mesh(box(3.4, 3, 0.16), mat(P.glass), { y: 1.6, z: 7.58, cast: false }));
 
   const bush = makeBush(rng, 1.1);
@@ -320,7 +316,7 @@ export function buildPark({ size, sign, rng }) {
   const playZ = ld * 0.2;
   g.add(mesh(box(7, 0.16, 6), mat(0xe8d9a8), { x: playX, y: 0.2, z: playZ, cast: false }));
   const slide = new THREE.Group();
-  slide.position.set(playX - 1.6, 0, playZ);
+  slide.position.set(playX, 0, playZ);
   slide.add(mesh(box(1.6, 0.2, 1.6), mat(P.blue), { y: 2.4 }));
   for (const [sx, sz] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) {
     slide.add(mesh(box(0.16, 2.4, 0.16), mat(P.metalDark), { x: sx, y: 1.2, z: sz }));
@@ -330,41 +326,28 @@ export function buildPark({ size, sign, rng }) {
   slide.add(ramp);
   g.add(slide);
 
-  const swing = new THREE.Group();
-  swing.position.set(playX + 2.2, 0, playZ);
-  swing.add(mesh(box(0.18, 0.18, 4.4), mat(P.red), { y: 2.6 }));
-  for (const sz of [-2.1, 2.1]) {
-    for (const sx of [-0.9, 0.9]) {
-      const leg = mesh(box(0.16, 2.7, 0.16), mat(P.red), { x: sx, y: 1.35, z: sz });
-      leg.rotation.z = sx > 0 ? -0.3 : 0.3;
-      swing.add(leg);
-    }
-  }
-  const seats = [];
-  for (const sz of [-1, 1]) {
-    const s = new THREE.Group();
-    s.position.set(0, 2.6, sz * 0.9);
-    s.add(mesh(box(0.1, 1.6, 0.1), mat(0x4a5560), { x: -0.35, y: -0.8, cast: false }));
-    s.add(mesh(box(0.1, 1.6, 0.1), mat(0x4a5560), { x: 0.35, y: -0.8, cast: false }));
-    s.add(mesh(box(0.9, 0.12, 0.4), mat(P.wood), { y: -1.6, cast: false }));
-    s.userData.phase = rng.range(0, Math.PI * 2);
-    seats.push(s);
-    swing.add(s);
-  }
-  g.add(swing);
-
   // greenery, benches, lamps, flower beds
   for (let i = 0; i < 9; i++) {
     const t = makeTree(rng, { scale: rng.range(0.9, 1.3) });
-    const tx = rng.range(-lw / 2 + 2, lw / 2 - 2);
+    const tx = rng.range(-lw / 2 + 4, lw / 2 - 4);
     const tz = rng.range(-ld / 2 + 2, ld / 2 - 2);
     if (Math.hypot(tx - pondX, tz - pondZ) < 6 || Math.hypot(tx - playX, tz - playZ) < 6) continue;
     t.position.set(tx, 0.1, tz);
     g.add(t);
   }
-  for (let i = 0; i < 4; i++) {
-    const b = makeBench(rng);
-    b.position.set(rng.range(-lw / 2 + 3, lw / 2 - 3), 0.2, rng.range(-ld / 2 + 3, ld / 2 - 3));
+  // Benches line the main path and face it. `makeBench(rng)` would randomise
+  // the facing, so it is called without one and rotated deliberately.
+  const pathNorth = -ld * 0.13;
+  const pathSouth = ld * 0.046;
+  for (const [bx, bz, ry] of [
+    [-lw * 0.34, pathNorth, 0],
+    [-lw * 0.054, pathNorth, 0],
+    [-lw * 0.018, pathSouth, Math.PI],
+    [lw * 0.286, pathSouth, Math.PI],
+  ]) {
+    const b = makeBench();
+    b.position.set(bx, 0.22, bz);
+    b.rotation.y = ry;
     g.add(b);
   }
   for (const sx of [-1, 1]) {
@@ -402,7 +385,6 @@ export function buildPark({ size, sign, rng }) {
     const k = (time % 2.4) / 2.4;
     ripple.scale.setScalar(0.5 + k * 1.6);
     ripple.material.opacity = 0.45 * (1 - k);
-    for (const seat of seats) seat.rotation.x = Math.sin(time * 1.6 + seat.userData.phase) * 0.22;
   };
   return g;
 }
@@ -417,38 +399,134 @@ export function buildPark({ size, sign, rng }) {
  * The track runs along local X; pier positions are chosen to clear the roads
  * that the viaduct crosses.
  */
-export function buildStation({ size, sign, rng }) {
+export function buildStation({ size, sign, rng, lot }) {
   const g = new THREE.Group();
   const [, ld] = size;
-  const DECK_Y = 6.2;
-  const HALF = 34;
-  const TRACK_Z = -1.8;
+  // The line follows the station's local X axis. This fixed station faces west,
+  // so its local X endpoints map exactly to the north/south terrain edges.
+  const authoredLot = lot || LANDMARK_LOTS.find((candidate) => candidate.reservedFor === 'station');
+  const stationWorldZ = authoredLot?.pos?.[1] ?? 20;
+  const TRACK_START = -WORLD.size / 2 - stationWorldZ;
+  const TRACK_END = WORLD.size / 2 - stationWorldZ;
+  // The railway is one straight, level line in an authored eastern corridor.
+  const DECK_Y = RAILWAY.deckY;
+  const TRACK_Z = RAILWAY.trackOffsetZ;
+  const DECK_WIDTH = RAILWAY.deckWidth;
+  const DECK_THICKNESS = RAILWAY.deckThickness;
+  const PIER_Z = RAILWAY.pierOffsetZ;
 
   // --- viaduct deck + piers ---
-  g.add(mesh(box(HALF * 2, 1.1, 10), mat(P.concrete), { y: DECK_Y - 0.55 }));
-  for (const lx of [-32, -24, -7, 1, 7, 21, 27, 32]) {
-    g.add(mesh(box(3, DECK_Y - 1.1, 2.6), mat(P.concreteDark), { x: lx, y: (DECK_Y - 1.1) / 2 }));
+  const trackStructure = new THREE.Group();
+  trackStructure.name = 'station-track-structure';
+
+  const deckParts = [];
+  const barrierParts = [];
+  const railParts = [];
+  const clearanceSegments = [];
+  const addTrackBox = (list, name, x1, x2, h, d, z, yOffset) => {
+    const geometry = new THREE.BoxGeometry(x2 - x1, h, d);
+    const transform = new THREE.Matrix4().makeTranslation(
+      (x1 + x2) / 2, DECK_Y + yOffset, z
+    );
+    geometry.applyMatrix4(transform);
+    geometry.computeBoundingBox();
+    clearanceSegments.push({ name, bounds: geometry.boundingBox.clone() });
+    list.push(geometry);
+  };
+  for (let x1 = TRACK_START; x1 < TRACK_END; x1 += 4) {
+    const x2 = Math.min(TRACK_END, x1 + 4);
+    addTrackBox(deckParts, 'station-track-deck', x1, x2, DECK_THICKNESS, DECK_WIDTH, TRACK_Z, -DECK_THICKNESS / 2);
+    for (const side of [-1, 1]) {
+      addTrackBox(
+        barrierParts, 'station-track-barrier', x1, x2, 0.65, 0.25,
+        TRACK_Z + side * (DECK_WIDTH / 2 - 0.125), 0.325
+      );
+    }
+    for (const railZ of [-0.7, 0.7]) {
+      addTrackBox(railParts, 'station-track-rail', x1, x2, 0.18, 0.18, TRACK_Z + railZ, 0.27);
+    }
   }
-  for (const sz of [-5.2, 5.2]) {
-    g.add(mesh(box(HALF * 2, 1.1, 0.5), mat(P.concrete), { z: sz, y: DECK_Y + 0.55, cast: false }));
+  const deck = new THREE.Mesh(mergeGeometries(deckParts, false), mat(P.concrete));
+  deck.name = 'station-track-deck';
+  deck.castShadow = true;
+  deck.receiveShadow = true;
+  trackStructure.add(deck);
+  const barriers = new THREE.Mesh(mergeGeometries(barrierParts, false), mat(P.concrete));
+  barriers.name = 'station-track-barriers';
+  barriers.castShadow = false;
+  barriers.receiveShadow = true;
+  trackStructure.add(barriers);
+  const rails = new THREE.Mesh(mergeGeometries(railParts, false), mat(P.metal));
+  rails.name = 'station-track-rails';
+  rails.castShadow = false;
+  rails.receiveShadow = false;
+  trackStructure.add(rails);
+  [...deckParts, ...barrierParts, ...railParts].forEach((geometry) => geometry.dispose());
+
+  const pierClearOfLotsAndRoads = (lx) => {
+    const angle = authoredLot?.rot || 0;
+    const worldX = (authoredLot?.pos?.[0] ?? 67) + lx * Math.cos(angle) + PIER_Z * Math.sin(angle);
+    const worldZ = stationWorldZ - lx * Math.sin(angle) + PIER_Z * Math.cos(angle);
+    for (const candidate of LANDMARK_LOTS) {
+      if (candidate.id === authoredLot?.id) continue;
+      const dx = worldX - candidate.pos[0];
+      const dz = worldZ - candidate.pos[1];
+      const c = Math.cos(candidate.rot);
+      const s = Math.sin(candidate.rot);
+      const localX = c * dx - s * dz;
+      const localZ = s * dx + c * dz;
+      if (
+        Math.abs(localX) < candidate.size[0] / 2 + 1.7
+        && Math.abs(localZ) < candidate.size[1] / 2 + 1.7
+      ) return false;
+    }
+    for (const road of ROAD_SEGMENTS) {
+      const ax = road.a[0];
+      const az = road.a[1];
+      const bx = road.b[0];
+      const bz = road.b[1];
+      const vx = bx - ax;
+      const vz = bz - az;
+      const lenSq = vx * vx + vz * vz;
+      const t = Math.max(0, Math.min(1, ((worldX - ax) * vx + (worldZ - az) * vz) / lenSq));
+      const distance = Math.hypot(worldX - (ax + vx * t), worldZ - (az + vz * t));
+      if (distance < (ROAD_WIDTH[road.w] || ROAD_WIDTH.minor) / 2 + 1.7) return false;
+    }
+    return true;
+  };
+
+  const piers = new THREE.Group();
+  piers.name = 'station-track-piers';
+  for (let lx = Math.ceil((TRACK_START + 5) / 11) * 11; lx < TRACK_END - 5; lx += 11) {
+    if (!pierClearOfLotsAndRoads(lx)) continue;
+    const pierHeight = DECK_Y - DECK_THICKNESS;
+    const pier = mesh(box(2.2, pierHeight, 1.8), mat(P.concreteDark), {
+      x: lx, y: pierHeight / 2, z: PIER_Z,
+    });
+    pier.name = 'station-track-pier';
+    piers.add(pier);
   }
+  trackStructure.add(piers);
 
   // --- rails + sleepers ---
-  const railMat = mat(P.metal);
-  for (const sz of [-0.7, 0.7]) {
-    g.add(mesh(box(HALF * 2, 0.22, 0.22), railMat, { z: TRACK_Z + sz, y: DECK_Y + 0.35, cast: false }));
-  }
-  const sleeperCount = Math.floor((HALF * 2) / 1.6);
+  const sleeperCount = Math.floor((TRACK_END - TRACK_START) / 1.6) + 1;
   const sleepers = new THREE.InstancedMesh(box(0.5, 0.16, 2.9), mat(P.sleeper), sleeperCount);
   sleepers.castShadow = false;
   sleepers.receiveShadow = false;
   const mtx = new THREE.Matrix4();
+  const sleeperPosition = new THREE.Vector3();
+  const sleeperRotation = new THREE.Quaternion();
+  const unitScale = new THREE.Vector3(1, 1, 1);
   for (let i = 0; i < sleeperCount; i++) {
-    mtx.makeTranslation(-HALF + i * 1.6, DECK_Y + 0.18, TRACK_Z);
+    const x = Math.min(TRACK_END, TRACK_START + i * 1.6);
+    sleeperPosition.set(x, DECK_Y + 0.1, TRACK_Z);
+    mtx.compose(sleeperPosition, sleeperRotation, unitScale);
     sleepers.setMatrixAt(i, mtx);
   }
   sleepers.instanceMatrix.needsUpdate = true;
-  g.add(sleepers);
+  trackStructure.add(sleepers);
+  trackStructure.userData.clearanceSegments = clearanceSegments;
+  g.add(trackStructure);
 
   // --- platform + canopy on the town side of the track ---
   g.add(mesh(box(26, 0.4, 4), mat(0xe3e0d6), { z: 2.4, y: DECK_Y + 0.3, cast: false }));
@@ -460,7 +538,7 @@ export function buildStation({ size, sign, rng }) {
   for (const lx of [-7, 7]) {
     const b = makeBench(rng);
     b.position.set(lx, DECK_Y + 0.5, 3.4);
-    b.rotation.y = 0;
+    b.rotation.y = Math.PI;
     g.add(b);
   }
 
@@ -484,12 +562,21 @@ export function buildStation({ size, sign, rng }) {
   g.add(house);
   facadeSign(g, sign, { w: 5.6, h: 0.95, y: houseH - 0.6, z: houseZ + houseD / 2 + 0.05 });
 
-  // stairs from the concourse up to the deck
-  for (let i = 0; i < 9; i++) {
-    const h = 0.75 + i * 0.62;
-    g.add(mesh(box(3.4, h, 0.9), mat(P.concrete), { x: 8, y: h / 2, z: houseZ - 1 - i * 0.9, cast: false }));
+  // A compact enclosed lift/stair core keeps the elevated platform visibly
+  // connected to the ground-level concourse without a long staircase spilling
+  // across neighbouring streets and lots.
+  const accessZ = houseZ - 3.5;
+  g.add(mesh(box(4.6, DECK_Y - 0.5, 5.2), mat(P.concrete), {
+    x: 8, y: (DECK_Y - 0.5) / 2, z: accessZ,
+  }));
+  for (let y = 2.4; y < DECK_Y - 1; y += 4.4) {
+    g.add(mesh(box(2.2, 1.8, 0.12), mat(P.glass), {
+      x: 8, y, z: accessZ + 2.66, cast: false,
+    }));
   }
-  g.add(mesh(box(0.2, 1.1, 8.2), mat(P.metalDark), { x: 9.8, y: DECK_Y * 0.55, z: houseZ - 4.5, cast: false }));
+  g.add(mesh(box(5.2, 0.45, 5.8), mat(P.roofTeal), {
+    x: 8, y: DECK_Y - 0.25, z: accessZ,
+  }));
 
   // --- the commuter train ---
   const train = new THREE.Group();
@@ -510,11 +597,18 @@ export function buildStation({ size, sign, rng }) {
   train.position.set(0, DECK_Y + 0.45, TRACK_Z);
   g.add(train);
 
-  const RUN_IN = -HALF - 16;
-  const RUN_OUT = HALF + 16;
+  const RUN_IN = TRACK_START - 16;
+  const RUN_OUT = TRACK_END + 16;
   let phase = 'waiting';
   let timer = 3;
   train.position.x = RUN_IN;
+  train.visible = false;
+
+  const alignTrainToTrack = () => {
+    train.position.y = DECK_Y + 0.4;
+    train.rotation.z = 0;
+  };
+  alignTrainToTrack();
 
   g.userData.animate = (dt) => {
     if (phase === 'waiting') {
@@ -522,6 +616,7 @@ export function buildStation({ size, sign, rng }) {
       if (timer <= 0) {
         phase = 'arriving';
         train.position.x = RUN_IN;
+        train.visible = true;
       }
     } else if (phase === 'arriving') {
       const remaining = -0.4 - train.position.x;
@@ -540,8 +635,10 @@ export function buildStation({ size, sign, rng }) {
         phase = 'waiting';
         timer = rng.range(7, 13);
         train.position.x = RUN_IN;
+        train.visible = false;
       }
     }
+    alignTrainToTrack();
   };
 
   g.userData.train = train;
@@ -554,6 +651,7 @@ export function buildStation({ size, sign, rng }) {
     if (phase === 'waiting') {
       phase = 'arriving';
       train.position.x = RUN_IN;
+      train.visible = true;
     } else if (phase === 'stopped') {
       timer = Math.max(timer, 4);
     }
@@ -602,16 +700,16 @@ export function buildMuseum({ size, sign, rng }) {
   windowGrid(g, { w: w - 2, h, z: -1 - d / 2 - 0.02, cols: 4, rows: 2, y0: 3.4, stepY: 3.4, color: 0x9fc4d6 });
 
   // grand steps + banners
-  steps(g, { w: w * 0.8, depth: 3, count: 5, z: frontZ + 1.4, color: 0xe7e0cf });
+  steps(g, { w: w * 0.8, depth: 3, count: 5, z: frontZ - 2, color: 0xe7e0cf });
   for (const sx of [-1, 1]) {
-    const pole = mesh(cylinder(0.12, 0.12, 7, 6), mat(P.metalDark), { x: sx * (w / 2 + 2.2), y: 3.5, z: frontZ + 3 });
+    const pole = mesh(cylinder(0.12, 0.12, 7, 6), mat(P.metalDark), { x: sx * (w / 2 + 1), y: 3.5, z: frontZ + 0.8 });
     g.add(pole);
-    const banner = mesh(box(0.1, 3.4, 1.5), mat(sx > 0 ? P.red : P.blue), { x: sx * (w / 2 + 2.2), y: 4.4, z: frontZ + 3.6, cast: false });
+    const banner = mesh(box(0.1, 3.4, 1.5), mat(sx > 0 ? P.red : P.blue), { x: sx * (w / 2 + 1), y: 4.4, z: frontZ + 1.4, cast: false });
     g.add(banner);
   }
   // a sculpture on the forecourt
   const art = new THREE.Group();
-  art.position.set(-w * 0.42, 0, frontZ + 5.5);
+  art.position.set(-w * 0.38, 0, frontZ + 0.8);
   art.add(mesh(box(2, 0.8, 2), stoneDark, { y: 0.4, cast: false }));
   const twist = mesh(box(0.9, 3.4, 0.9), mat(P.orange), { y: 2.4 });
   twist.rotation.y = 0.6;
@@ -619,9 +717,10 @@ export function buildMuseum({ size, sign, rng }) {
   art.add(twist);
   g.add(art);
 
-  for (let i = 0; i < 3; i++) {
+  const treeSpots = [[w / 2 - 1.8, -4], [w / 2 - 1.4, 0], [w / 2 - 1.8, 4]];
+  for (let i = 0; i < treeSpots.length; i++) {
     const t = makeTree(rng, { scale: 0.8, kind: 'tall' });
-    t.position.set(w / 2 - 1 + rng.range(0, 3), 0, frontZ + 2 + i * 3);
+    t.position.set(treeSpots[i][0], 0, treeSpots[i][1]);
     g.add(t);
   }
   return g;
@@ -667,7 +766,7 @@ export function buildMall({ size, sign, rng }) {
 
   // big vertical sign pylon - malls always shout
   const pylon = new THREE.Group();
-  pylon.position.set(w / 2 + 1.4, 0, frontZ + 1);
+  pylon.position.set(w / 2 + 0.5, 0, frontZ + 0.5);
   pylon.add(mesh(box(1.6, 13, 1.2), body, { y: 6.5 }));
   const pylonSign = signPlane('MALL', 1.4, 6, { bg: 'transparent', fg: '#ef7d57' });
   pylonSign.position.set(0, 8, 0.65);
@@ -684,15 +783,16 @@ export function buildMall({ size, sign, rng }) {
   }
 
   // car park with a few parked cars
-  const lotZ = frontZ + 6.5;
-  g.add(mesh(box(w, 0.14, 5.5), mat(0x9aa2ab), { y: 0.09, z: lotZ, cast: false }));
+  const lotZ = frontZ + 2.9;
+  g.add(mesh(box(w, 0.14, 2.8), mat(0x9aa2ab), { y: 0.09, z: lotZ, cast: false }));
   for (let i = 0; i < 5; i++) {
-    g.add(mesh(box(0.18, 0.06, 4.6), mat(0xe8e8e0), { x: -w / 2 + 3 + i * 4, y: 0.18, z: lotZ, cast: false }));
+    g.add(mesh(box(0.18, 0.06, 2.2), mat(0xe8e8e0), { x: -w / 2 + 3 + i * 4, y: 0.18, z: lotZ, cast: false }));
   }
   for (let i = 0; i < 3; i++) {
     if (rng.chance(0.25)) continue;
     const car = makeCar(rng);
-    car.position.set(-w / 2 + 5 + i * 4, 0, lotZ);
+    car.position.set(-w / 2 + 5 + i * 7, 0, lotZ);
+    car.rotation.y = Math.PI / 2;
     g.add(car);
   }
   return g;
@@ -743,13 +843,13 @@ export function buildStadium({ size, sign, rng }) {
   g.add(bowlLower);
 
   // roof lip
-  const roof = new THREE.Mesh(new THREE.RingGeometry(0.86, 1.12, 44), mat(0xf5f2e9, { side: THREE.DoubleSide }));
+  const roof = new THREE.Mesh(new THREE.RingGeometry(0.86, 1.1, 44), mat(0xf5f2e9, { side: THREE.DoubleSide }));
   roof.rotation.x = -Math.PI / 2;
   roof.scale.set(rx, rz, 1);
   roof.position.y = 8.6;
   roof.castShadow = true;
   g.add(roof);
-  const lip = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.12, 1.1, 44, 1, true), mat(0xd9d3c4, { side: THREE.DoubleSide }));
+  const lip = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.1, 44, 1, true), mat(0xd9d3c4, { side: THREE.DoubleSide }));
   lip.scale.set(rx, 1, rz);
   lip.position.y = 9.1;
   g.add(lip);
@@ -815,7 +915,7 @@ export function buildStadium({ size, sign, rng }) {
   }
 
   // entrance block, ticket booths and the big sign
-  const frontZ = rz - 0.5;
+  const frontZ = rz - 0.65;
   const gate = new THREE.Group();
   gate.position.set(0, 0, frontZ);
   gate.add(mesh(roundedBox(16, 9, 4.5, 0.3), mat(0xf5f2e9), { y: 4.5 }));

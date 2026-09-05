@@ -1,0 +1,537 @@
+{
+  "generatedAt": "2026-08-27T03:40:38.186Z",
+  "world": {
+    "size": 310,
+    "flatRadius": 132,
+    "hillRadius": 151,
+    "seed": 20260823
+  },
+  "classInventory": {
+    "small": {
+      "landmarks": 7,
+      "parcels": 4,
+      "usable": [
+        16,
+        14
+      ],
+      "reserved": [
+        20,
+        18
+      ]
+    },
+    "medium": {
+      "landmarks": 14,
+      "parcels": 6,
+      "usable": [
+        22,
+        18
+      ],
+      "reserved": [
+        26,
+        22
+      ]
+    },
+    "large": {
+      "landmarks": 11,
+      "parcels": 6,
+      "usable": [
+        28,
+        24
+      ],
+      "reserved": [
+        32,
+        28
+      ]
+    },
+    "xl": {
+      "landmarks": 1,
+      "parcels": 1,
+      "usable": [
+        38,
+        28
+      ],
+      "reserved": [
+        42,
+        32
+      ]
+    }
+  },
+  "landmarks": [
+    {
+      "landmark": "school",
+      "class": "large",
+      "actual": [
+        28,
+        23.02
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "library",
+      "class": "medium",
+      "actual": [
+        19.36,
+        16.52
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "hospital",
+      "class": "medium",
+      "actual": [
+        19.8,
+        15.77
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "police",
+      "class": "medium",
+      "actual": [
+        19.64,
+        15.72
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "fire",
+      "class": "medium",
+      "actual": [
+        19,
+        17.35
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "bank",
+      "class": "small",
+      "actual": [
+        13,
+        12.5
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "station",
+      "class": "large",
+      "actual": [
+        26,
+        12
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "busStation",
+      "class": "medium",
+      "actual": [
+        20,
+        16.95
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "airport",
+      "class": "large",
+      "actual": [
+        26,
+        19.85
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "gasStation",
+      "class": "medium",
+      "actual": [
+        18,
+        14.24
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "stadium",
+      "class": "xl",
+      "actual": [
+        37.4,
+        27.15
+      ],
+      "allowed": [
+        38,
+        28
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "park",
+      "class": "large",
+      "actual": [
+        27.3,
+        23.15
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "gym",
+      "class": "medium",
+      "actual": [
+        19,
+        16.96
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "pool",
+      "class": "medium",
+      "actual": [
+        20,
+        16.4
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "playground",
+      "class": "medium",
+      "actual": [
+        20,
+        16
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "zoo",
+      "class": "large",
+      "actual": [
+        26.2,
+        22.74
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "aquarium",
+      "class": "medium",
+      "actual": [
+        18,
+        17.18
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "museum",
+      "class": "medium",
+      "actual": [
+        21,
+        17.1
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "cinema",
+      "class": "medium",
+      "actual": [
+        19,
+        16.9
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "amusementPark",
+      "class": "large",
+      "actual": [
+        26.88,
+        22
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "castle",
+      "class": "large",
+      "actual": [
+        25,
+        23.92
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "temple",
+      "class": "large",
+      "actual": [
+        25,
+        21
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "beach",
+      "class": "large",
+      "actual": [
+        26,
+        22.76
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "farm",
+      "class": "large",
+      "actual": [
+        26,
+        22
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "mall",
+      "class": "large",
+      "actual": [
+        26.8,
+        22.9
+      ],
+      "allowed": [
+        28,
+        24
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "supermarket",
+      "class": "medium",
+      "actual": [
+        20,
+        17
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "convenience",
+      "class": "small",
+      "actual": [
+        14.27,
+        12.2
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "restaurant",
+      "class": "small",
+      "actual": [
+        13.7,
+        12.2
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "cafe",
+      "class": "small",
+      "actual": [
+        13.7,
+        12.35
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "bakery",
+      "class": "small",
+      "actual": [
+        13.7,
+        12.2
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "bookstore",
+      "class": "small",
+      "actual": [
+        13.7,
+        12.2
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "hotel",
+      "class": "medium",
+      "actual": [
+        19,
+        15.5
+      ],
+      "allowed": [
+        22,
+        18
+      ],
+      "pass": true
+    },
+    {
+      "landmark": "house",
+      "class": "small",
+      "actual": [
+        14,
+        12
+      ],
+      "allowed": [
+        16,
+        14
+      ],
+      "pass": true
+    }
+  ],
+  "boundsFailures": [],
+  "parcelRoadClearance": {
+    "margin": 2.224,
+    "lot": "large-center-north",
+    "road": "road:7:sidewalk:-1"
+  },
+  "parcelPairClearance": {
+    "gap": 6,
+    "a": "small-center-west",
+    "b": "small-center-east"
+  },
+  "railway": {
+    "placementsTested": 249,
+    "crossingPlacements": 0,
+    "minimumVerticalClearance": null,
+    "failures": []
+  },
+  "randomizedRuns": [
+    {
+      "label": "all-types direct random",
+      "runs": 50000,
+      "failures": 0,
+      "minCompleted": 10,
+      "firstFailure": null
+    },
+    {
+      "label": "all-types three-card choices",
+      "runs": 50000,
+      "failures": 0,
+      "minCompleted": 10,
+      "firstFailure": null
+    },
+    {
+      "label": "all-types random permutations",
+      "runs": 50000,
+      "failures": 0,
+      "minCompleted": 10,
+      "firstFailure": null
+    },
+    {
+      "label": "default-unlocked three-card choices",
+      "runs": 50000,
+      "failures": 0,
+      "minCompleted": 10,
+      "firstFailure": null
+    }
+  ]
+}

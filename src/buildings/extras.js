@@ -69,7 +69,7 @@ export function shopFront({
   // pavement life
   if (rng && rng.chance(0.7)) {
     const bike = makeBicycle(rng);
-    bike.position.set(-w * 0.36, 0, front + 2.2);
+    bike.position.set(-w * 0.36, 0, front + 1.6);
     bike.rotation.y = 1.4;
     g.add(bike);
   }
@@ -101,7 +101,7 @@ export function civicBlock({
   for (const sx of [-2.4, 2.4]) {
     g.add(mesh(cylinder(0.18, 0.18, 3.6, 8), mat(P.metal), { x: sx, y: 1.8, z: front + 2.3 }));
   }
-  steps(g, { w: 6.5, depth: 1.8, count: 3, z: front + 2.6 });
+  steps(g, { w: 6.5, depth: 1.8, count: 3, z: front + 0.7 });
   facadeSign(g, sign, { w: Math.min(w * 0.62, 8), h: 0.95, y: h - 1.1, z: front + 0.08 });
 
   if (tower) {
@@ -132,12 +132,12 @@ export function buildBakery({ size, sign, rng }) {
       const pretzel = new THREE.Mesh(new THREE.TorusKnotGeometry(0.55, 0.19, 48, 6, 2, 3), mat(0xc98a4b));
       pretzel.position.set(-w * 0.32, 4.35, front + 0.35);
       g.add(pretzel);
-      const table = mesh(box(2.2, 0.16, 1.1), mat(P.wood), { x: w * 0.05, y: 0.95, z: front + 1.9, cast: false });
+      const table = mesh(box(2.2, 0.16, 1.1), mat(P.wood), { x: w * 0.05, y: 0.95, z: front + 1.3, cast: false });
       g.add(table);
-      for (const sx of [-0.9, 0.9]) g.add(mesh(box(0.14, 0.95, 0.14), mat(P.woodDark), { x: w * 0.05 + sx, y: 0.48, z: front + 1.9, cast: false }));
+      for (const sx of [-0.9, 0.9]) g.add(mesh(box(0.14, 0.95, 0.14), mat(P.woodDark), { x: w * 0.05 + sx, y: 0.48, z: front + 1.3, cast: false }));
       for (let i = 0; i < 4; i++) {
         const loaf = mesh(sphere(0.3, 7, 5), mat(rng.pick([0xd9a566, 0xc98a4b, 0xe8c894])), {
-          x: w * 0.05 - 0.8 + i * 0.55, y: 1.16, z: front + 1.9, cast: false,
+          x: w * 0.05 - 0.8 + i * 0.55, y: 1.16, z: front + 1.3, cast: false,
         });
         loaf.scale.set(1.5, 0.7, 0.9);
         g.add(loaf);
@@ -152,13 +152,13 @@ export function buildCafe({ size, sign, rng }) {
     dressing: (g, { w, front }) => {
       for (let i = 0; i < 2; i++) {
         const x = -w * 0.25 + i * 3.2;
-        g.add(mesh(cylinder(0.75, 0.75, 0.14, 12), mat(0xffffff), { x, y: 0.95, z: front + 2.4, cast: false }));
-        g.add(mesh(cylinder(0.12, 0.16, 0.95, 8), mat(P.metalDark), { x, y: 0.48, z: front + 2.4, cast: false }));
-        g.add(mesh(cylinder(0.1, 0.1, 2.6, 8), mat(P.metalDark), { x, y: 1.3, z: front + 2.4, cast: false }));
-        const shade = mesh(cylinder(0.05, 1.7, 0.7, 10), mat(0xd96a5a), { x, y: 2.7, z: front + 2.4 });
+        g.add(mesh(cylinder(0.75, 0.75, 0.14, 12), mat(0xffffff), { x, y: 0.95, z: front + 0.8, cast: false }));
+        g.add(mesh(cylinder(0.12, 0.16, 0.95, 8), mat(P.metalDark), { x, y: 0.48, z: front + 0.8, cast: false }));
+        g.add(mesh(cylinder(0.1, 0.1, 2.6, 8), mat(P.metalDark), { x, y: 1.3, z: front + 0.8, cast: false }));
+        const shade = mesh(cylinder(0.05, 1.2, 0.7, 10), mat(0xd96a5a), { x, y: 2.7, z: front + 0.8 });
         g.add(shade);
         for (const sx of [-1.1, 1.1]) {
-          g.add(mesh(roundedBox(0.5, 0.5, 0.5, 0.12), mat(P.wood), { x: x + sx, y: 0.5, z: front + 2.4, cast: false }));
+          g.add(mesh(roundedBox(0.5, 0.5, 0.5, 0.12), mat(P.wood), { x: x + sx, y: 0.5, z: front + 0.8, cast: false }));
         }
       }
     },
@@ -185,7 +185,7 @@ export function buildConvenience({ size, sign, rng }) {
     size, sign, rng, wall: 0xffffff, accent: 0x2fa36b, roofSign: true,
     dressing: (g, { w, d, front }) => {
       g.add(mesh(box(w + 0.7, 0.5, d + 0.7), mat(0x3fa8dd), { y: 4.2, cast: false }));
-      g.add(mesh(box(3.4, 0.12, 4.4), mat(0x9aa2ab), { x: w * 0.75, y: 0.08, z: front - 1, cast: false }));
+      g.add(mesh(box(3.4, 0.12, 4.4), mat(0x9aa2ab), { x: w * 0.44, y: 0.08, z: front - 1, cast: false }));
     },
   });
 }
@@ -219,12 +219,12 @@ export function buildSupermarket({ size, sign, rng }) {
   facadeSign(g, sign, { w: Math.min(w * 0.7, 10), h: 1.2, y: h - 1, z: front + 0.1, fg: '#e0553f' });
 
   // trolley bay and a delivery van
-  g.add(mesh(box(3.6, 0.12, 3), mat(0x9aa2ab), { x: -w * 0.36, y: 0.08, z: front + 3.4, cast: false }));
+  g.add(mesh(box(3.6, 0.12, 3), mat(0x9aa2ab), { x: -w * 0.36, y: 0.08, z: front + 3, cast: false }));
   for (let i = 0; i < 3; i++) {
     g.add(mesh(box(0.8, 0.9, 1.2), mat(P.metal), { x: -w * 0.36, y: 0.6, z: front + 2.6 + i * 0.5, cast: false }));
   }
   const van = makeCar(rng);
-  van.position.set(w * 0.3, 0, front + 4);
+  van.position.set(w * 0.3, 0, front + 3);
   van.rotation.y = Math.PI / 2;
   g.add(van);
   return g;
@@ -273,6 +273,7 @@ export function buildGasStation({ size, sign, rng }) {
 /* ------------------------------ CIVIC ------------------------------ */
 
 export function buildPoliceStation({ size, sign, rng }) {
+  const [lw, ld] = size;
   return civicBlock({
     size, sign, rng, wall: 0xeef2f6, accent: 0x2f5f9e, storeys: 2,
     dressing: (g, { w, front }) => {
@@ -280,10 +281,12 @@ export function buildPoliceStation({ size, sign, rng }) {
       const lamp = mesh(cylinder(0.4, 0.4, 0.5, 10), glow(0x4aa3ff, 0.8), { y: 4.2, z: front + 1.35, cast: false });
       g.add(lamp);
       const patrol = makeCar(rng);
-      patrol.position.set(w * 0.45 + 2.4, 0, front + 3.4);
+      const patrolX = Math.min(w * 0.45 + 2.4, lw / 2 - 2.8);
+      const patrolZ = Math.min(front + 3.4, ld / 2 - 1.4);
+      patrol.position.set(patrolX, 0, patrolZ);
       patrol.rotation.y = Math.PI / 2;
       g.add(patrol);
-      g.add(mesh(box(0.9, 0.3, 1.6), glow(0x4aa3ff, 0.6), { x: w * 0.45 + 2.4, y: 2.3, z: front + 3.4, cast: false }));
+      g.add(mesh(box(0.9, 0.3, 1.6), glow(0x4aa3ff, 0.6), { x: patrolX, y: 2.3, z: patrolZ, cast: false }));
       const prev = g.userData.animate;
       g.userData.animate = (dt, time) => {
         if (prev) prev(dt, time);
@@ -300,9 +303,9 @@ export function buildFireStation({ size, sign, rng }) {
   const w = Math.min(lw - 3, 18);
   const d = Math.min(ld - 5, 12);
   const h = 7.5;
-  g.add(mesh(roundedBox(w, h, d, 0.2), mat(0xf4ece2), { y: h / 2, z: -1 }));
-  g.add(mesh(box(w + 1, 0.6, d + 1), mat(0xc0392b), { y: h + 0.3, z: -1 }));
-  const front = d / 2 - 1;
+  g.add(mesh(roundedBox(w, h, d, 0.2), mat(0xf4ece2), { y: h / 2, z: -2 }));
+  g.add(mesh(box(w + 1, 0.6, d + 1), mat(0xc0392b), { y: h + 0.3, z: -2 }));
+  const front = d / 2 - 2;
 
   // the giveaway: two big roller doors with a fire engine pulling out
   for (const sx of [-1, 1]) {
@@ -317,7 +320,7 @@ export function buildFireStation({ size, sign, rng }) {
   g.add(mesh(hipRoof(4.2, 1.6, 4.2), mat(0xc0392b), { x: -w / 2 + 1.7, y: 11, z: -d / 2 - 0.4 }));
 
   const engine = new THREE.Group();
-  engine.position.set(w * 0.21, 0, front + 4.6);
+  engine.position.set(w * 0.21, 0, front + 2.3);
   engine.add(mesh(roundedBox(2.4, 1.5, 6.4, 0.3), mat(0xd0342c), { y: 1.35 }));
   engine.add(mesh(roundedBox(2.3, 1.2, 2.2, 0.25), mat(0xd0342c), { y: 2.6, z: 1.9 }));
   engine.add(mesh(box(2.1, 0.7, 1.5), mat(P.glass), { y: 2.7, z: 3, cast: false }));
@@ -330,6 +333,7 @@ export function buildFireStation({ size, sign, rng }) {
       engine.add(wheel);
     }
   }
+  engine.scale.setScalar(0.68);
   g.add(engine);
   g.userData.engine = engine;
   g.userData.engineHome = engine.position.clone();
@@ -377,11 +381,8 @@ export function buildCityHall({ size, sign, rng }) {
 export function buildBank({ size, sign, rng }) {
   return civicBlock({
     size, sign, rng, wall: 0xeae3d2, accent: 0x2c7a5b, storeys: 2,
-    dressing: (g, { w, front }) => {
-      // columns and a very solid-looking door
-      for (let i = -2; i <= 2; i++) {
-        g.add(mesh(cylinder(0.42, 0.46, 6.6, 10), mat(0xf6f2e6), { x: i * (w * 0.17), y: 3.3, z: front + 1.5 }));
-      }
+    dressing: (g, { front }) => {
+      // A very solid-looking vault door.
       g.add(mesh(cylinder(1.1, 1.1, 0.5, 16), mat(P.metal), { y: 1.6, z: front + 0.16, cast: false }));
       const dial = mesh(box(0.16, 1.5, 0.1), mat(P.metalDark), { y: 1.6, z: front + 0.42, cast: false });
       dial.rotation.z = 0.6;
@@ -417,7 +418,7 @@ export function buildZoo({ size, sign, rng }) {
   const pens = [
     { x: -lw * 0.26, z: -ld * 0.05, r: 4.6, animal: 'elephant' },
     { x: lw * 0.26, z: -ld * 0.06, r: 4.2, animal: 'giraffe' },
-    { x: -lw * 0.05, z: -ld * 0.32, r: 4.4, animal: 'lion' },
+    { x: 0, z: -ld * 0.34, r: 3.4, animal: 'lion' },
   ];
   for (const pen of pens) {
     const ring = new THREE.Mesh(
@@ -465,9 +466,19 @@ export function buildZoo({ size, sign, rng }) {
     pen.model = a;
   }
 
-  for (let i = 0; i < 7; i++) {
+  const treeSpots = [];
+  for (let attempt = 0; attempt < 70 && treeSpots.length < 7; attempt++) {
+    const x = rng.range(-lw / 2 + 2, lw / 2 - 2);
+    const z = rng.range(-ld / 2 + 2, ld / 2 - 4);
+    if (pens.some((pen) => Math.hypot(x - pen.x, z - pen.z) < pen.r + 1.5)) continue;
+    if (Math.abs(x) < 2.4 || Math.abs(z + ld * 0.22) < 2.4) continue;
+    if (Math.hypot(x - lw * 0.3, z - ld * 0.22) < 2.5) continue;
+    if (treeSpots.some((spot) => Math.hypot(x - spot.x, z - spot.z) < 3)) continue;
+    treeSpots.push({ x, z });
+  }
+  for (const spot of treeSpots) {
     const t = makeTree(rng, { scale: rng.range(0.8, 1.2) });
-    t.position.set(rng.range(-lw / 2 + 2, lw / 2 - 2), 0.1, rng.range(-ld / 2 + 2, ld / 2 - 4));
+    t.position.set(spot.x, 0.1, spot.z);
     g.add(t);
   }
   const bench = makeBench(rng);
@@ -499,15 +510,16 @@ export function buildAquarium({ size, sign, rng }) {
   const g = new THREE.Group();
   const [lw, ld] = size;
   const w = Math.min(lw - 4, 20);
-  const d = Math.min(ld - 5, 14);
+  const d = Math.min(ld * 0.5, 9);
   const h = 9;
+  const buildingZ = -ld * 0.13;
 
   // a curved, modern shell in blue glass
-  g.add(mesh(roundedBox(w, h, d, 0.9), mat(0xe8f2f6), { y: h / 2, z: -1 }));
-  const dome = mesh(sphere(w * 0.36, 18, 12), mat(0x7fc9e8, { transparent: true, opacity: 0.85 }), { y: h - 0.5, z: -1 });
+  g.add(mesh(roundedBox(w, h, d, 0.9), mat(0xe8f2f6), { y: h / 2, z: buildingZ }));
+  const dome = mesh(sphere(w * 0.36, 18, 12), mat(0x7fc9e8, { transparent: true, opacity: 0.85 }), { y: h - 0.5, z: buildingZ });
   dome.scale.y = 0.5;
   g.add(dome);
-  const front = d / 2 - 1;
+  const front = buildingZ + d / 2;
   for (let i = 0; i < 3; i++) {
     g.add(mesh(box(w * 0.8, 1.6, 0.14), mat(0x3fa3d9), { y: 2.2 + i * 2.6, z: front + 0.02, cast: false }));
   }
@@ -515,11 +527,12 @@ export function buildAquarium({ size, sign, rng }) {
   facadeSign(g, sign, { w: Math.min(w * 0.62, 9), h: 1.1, y: h - 1.4, z: front + 0.1, fg: '#2a7fa8' });
 
   // outdoor pool with a leaping dolphin
-  const pool = mesh(cylinder(4.4, 4.4, 0.6, 20), mat(0x4fbfe0), { x: -w * 0.1, y: 0.3, z: front + 5, cast: false });
+  const poolZ = front + 3.2;
+  const pool = mesh(cylinder(2.7, 2.7, 0.6, 20), mat(0x4fbfe0), { x: -w * 0.1, y: 0.3, z: poolZ, cast: false });
   g.add(pool);
-  g.add(mesh(cylinder(4.9, 4.9, 0.4, 20), mat(0xe6e2d6), { x: -w * 0.1, y: 0.2, z: front + 5, cast: false }));
+  g.add(mesh(cylinder(3.1, 3.1, 0.4, 20), mat(0xe6e2d6), { x: -w * 0.1, y: 0.2, z: poolZ, cast: false }));
   const dolphin = new THREE.Group();
-  dolphin.position.set(-w * 0.1, 1.4, front + 5);
+  dolphin.position.set(-w * 0.1, 1.4, poolZ);
   const bodyD = mesh(roundedBox(1, 1.1, 3.4, 0.5), mat(0x8fa8b8), {});
   dolphin.add(bodyD);
   dolphin.add(mesh(box(0.14, 0.8, 0.9), mat(0x8fa8b8), { y: 0.7, z: -0.2, cast: false }));
@@ -529,7 +542,7 @@ export function buildAquarium({ size, sign, rng }) {
   let jumpT = 0;
   const show = { speed: 1 };
   g.userData.dolphinShow = show;
-  g.userData.poolCentre = new THREE.Vector3(-w * 0.1, 0, front + 5);
+  g.userData.poolCentre = new THREE.Vector3(-w * 0.1, 0, poolZ);
   g.userData.animate = (dt) => {
     jumpT = (jumpT + dt * 0.5 * show.speed) % 1;
     dolphin.position.y = 0.9 + Math.sin(jumpT * Math.PI) * 2.4;
@@ -561,7 +574,7 @@ export function buildAmusementPark({ size, sign, rng }) {
 
   // ferris wheel
   const wheel = new THREE.Group();
-  wheel.position.set(-lw * 0.24, 0, -ld * 0.16);
+  wheel.position.set(-lw * 0.2, 0, -ld * 0.16);
   const R = Math.min(lw, ld) * 0.32;
   for (const sx of [-1.6, 1.6]) {
     const leg = mesh(cylinder(0.22, 0.3, R + 2, 8), mat(P.metalDark), { x: sx, y: (R + 2) / 2 });
@@ -646,7 +659,7 @@ export function buildCastle({ size, sign, rng }) {
   const g = new THREE.Group();
   const [lw, ld] = size;
   const wallH = 5;
-  const half = Math.min(lw, ld) * 0.42;
+  const half = Math.min(lw, ld) * 0.39;
 
   // stone base and curtain walls
   g.add(mesh(box(lw - 3, 1.2, ld - 3), mat(0x9aa0a6), { y: 0.6, cast: false }));
@@ -763,12 +776,12 @@ export function buildMovieTheater({ size, sign, rng }) {
   const bulbs = [];
   for (let i = 0; i < 12; i++) {
     const b = mesh(sphere(0.17, 6, 5), glow(0xffe9a8, 0.7), {
-      x: -w * 0.4 + (w * 0.8 * i) / 11, y: 4.5, z: front + 3.4, cast: false,
+      x: -w * 0.4 + (w * 0.8 * i) / 11, y: 4.5, z: front + 3.25, cast: false,
     });
     bulbs.push(b);
     g.add(b);
   }
-  facadeSign(g, sign, { w: Math.min(w * 0.7, 10), h: 1.1, y: 5.2, z: front + 3.45, bg: '#f7f0dc', fg: '#c0392b' });
+  facadeSign(g, sign, { w: Math.min(w * 0.7, 10), h: 1.1, y: 5.2, z: front + 3.25, bg: '#f7f0dc', fg: '#c0392b' });
   // poster boards and doors
   for (const sx of [-1, 1]) {
     g.add(mesh(box(2, 3, 0.16), mat(rng.pick([0x4d96ff, 0xffd166, 0x6bcb77])), { x: sx * w * 0.3, y: 2.2, z: front + 0.03, cast: false }));
@@ -811,9 +824,9 @@ export function buildGym({ size, sign, rng }) {
   facadeSign(g, sign, { w: Math.min(w * 0.55, 8), h: 1, y: 5.9, z: front + 0.08, fg: '#2f5f9e' });
   steps(g, { w: 6, depth: 1.6, count: 2, z: front + 1.2 });
   // outdoor half-court
-  g.add(mesh(box(w * 0.6, 0.12, 6), mat(0xb96a4a), { x: w * 0.1, y: 0.08, z: front + 5, cast: false }));
+  g.add(mesh(box(w * 0.6, 0.12, 3), mat(0xb96a4a), { x: w * 0.1, y: 0.08, z: front + 1.7, cast: false }));
   const hoop = new THREE.Group();
-  hoop.position.set(w * 0.1, 0, front + 7.4);
+  hoop.position.set(w * 0.1, 0, front + 2.3);
   hoop.add(mesh(cylinder(0.16, 0.2, 3.4, 8), mat(P.metalDark), { y: 1.7 }));
   hoop.add(mesh(box(1.8, 1.2, 0.14), mat(0xffffff), { y: 3.6 }));
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.07, 5, 14), mat(0xe0553f));
@@ -896,24 +909,31 @@ export function buildPlayground({ size, sign, rng }) {
 
   // swings and a see-saw
   const swing = new THREE.Group();
+  swing.name = 'playground-swing-set';
   swing.position.set(lw * 0.2, 0, -ld * 0.04);
   swing.add(mesh(box(0.18, 0.18, 4.2), mat(0xe0553f), { y: 2.6 }));
   for (const sz of [-2, 2]) {
     for (const sx of [-0.9, 0.9]) {
       const leg = mesh(box(0.16, 2.7, 0.16), mat(0xe0553f), { x: sx, y: 1.35, z: sz });
-      leg.rotation.z = sx > 0 ? -0.3 : 0.3;
+      leg.name = 'playground-swing-support';
+      // The feet flare out while the tops meet beneath the crossbar. Reversing
+      // these signs makes the pair cross like an X instead of forming an A.
+      leg.rotation.z = sx > 0 ? 0.3 : -0.3;
       swing.add(leg);
     }
   }
   const seats = [];
   for (const sz of [-0.9, 0.9]) {
     const s = new THREE.Group();
+    s.name = 'playground-swing-chains';
     s.position.set(0, 2.6, sz);
     s.add(mesh(box(0.08, 1.6, 0.08), mat(0x4a5560), { x: -0.32, y: -0.8, cast: false }));
     s.add(mesh(box(0.08, 1.6, 0.08), mat(0x4a5560), { x: 0.32, y: -0.8, cast: false }));
-    s.add(mesh(box(0.85, 0.12, 0.4), mat(0x4d96ff), { y: -1.6, cast: false }));
+    const seat = mesh(box(0.85, 0.12, 0.4), mat(0x4d96ff), { y: -1.6, cast: false });
+    seat.name = 'playground-swing-seat';
+    s.add(seat);
     s.userData.phase = rng.range(0, 6.28);
-    seats.push(s);
+    seats.push({ chains: s, seat });
     swing.add(s);
   }
   g.add(swing);
@@ -943,7 +963,13 @@ export function buildPlayground({ size, sign, rng }) {
   g.add(post);
 
   g.userData.animate = (dt, time) => {
-    for (const s of seats) s.rotation.x = Math.sin(time * 1.8 + s.userData.phase) * 0.3;
+    for (const { chains, seat } of seats) {
+      const angle = Math.sin(time * 1.8 + chains.userData.phase) * 0.3;
+      chains.rotation.x = angle;
+      // Let the chains carry the seat along their arc while the freely hanging
+      // plank counter-rotates to remain level in world space.
+      seat.rotation.x = -angle;
+    }
     plank.rotation.x = Math.sin(time * 1.2) * 0.22;
   };
   return g;
@@ -954,7 +980,7 @@ export function buildBeach({ size, sign, rng }) {
   const [lw, ld] = size;
   // sand in front, sea behind - reads as the coast even inland on the map edge
   g.add(mesh(box(lw - 2, 0.2, ld - 2), mat(0xf0e0b8), { y: 0.1, cast: false }));
-  const sea = mesh(box(lw - 2, 0.5, ld * 0.42), mat(0x4fbfe0), { y: 0.2, z: -ld * 0.36, cast: false });
+  const sea = mesh(box(lw - 2, 0.5, ld * 0.42), mat(0x4fbfe0), { y: 0.2, z: -ld * 0.28, cast: false });
   g.add(sea);
   const foam = mesh(box(lw - 2.4, 0.24, 1.6), mat(0xffffff), { y: 0.34, z: -ld * 0.15, cast: false });
   g.add(foam);
@@ -1026,7 +1052,7 @@ export function buildFarm({ size, sign, rng }) {
   facadeSign(g, sign, { w: 5, h: 0.9, y: 5.4, z: -ld * 0.12 + 3.9, fg: '#8a3324' });
 
   // crop rows and a greenhouse
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     g.add(mesh(box(lw * 0.44, 0.3, 1.1), mat(0xb08d5a), {
       x: lw * 0.18, y: 0.22, z: -ld * 0.28 + i * 2.4, cast: false,
     }));
@@ -1045,25 +1071,30 @@ export function buildFarm({ size, sign, rng }) {
   // a few animals in a paddock
   const cows = [];
   const fence = makeFenceRun(lw * 0.4, { height: 1.1, color: 0xb98a5a });
-  fence.position.set(lw * 0.05, 0, ld * 0.34);
+  fence.position.set(lw * 0.15, 0, ld * 0.2);
   g.add(fence);
-  for (let i = 0; i < 3; i++) {
+  const cowSpots = [
+    [-lw * 0.15, ld * 0.34, 0],
+    [lw * 0.05, ld * 0.38, Math.PI],
+    [lw * 0.24, ld * 0.32, 0],
+  ];
+  for (const [x, z, heading] of cowSpots) {
     const cow = new THREE.Group();
-    cow.position.set(lw * 0.05 + rng.range(-4, 4), 0, ld * 0.22 + rng.range(-2, 2));
+    cow.position.set(x, 0, z);
     cow.add(mesh(roundedBox(2.4, 1.2, 1.2, 0.45), mat(0xf4f0e4), { y: 1.2 }));
     cow.add(mesh(roundedBox(0.9, 0.8, 0.8, 0.25), mat(0x3c3c44), { x: 1.4, y: 1.4 }));
     cow.add(mesh(box(1, 0.5, 1.22), mat(0x3c3c44), { x: -0.3, y: 1.35, cast: false }));
     for (const [sx, sz] of [[-0.7, -0.4], [-0.7, 0.4], [0.7, -0.4], [0.7, 0.4]]) {
       cow.add(mesh(cylinder(0.16, 0.16, 0.9, 6), mat(0xf4f0e4), { x: sx, y: 0.45, z: sz }));
     }
-    cow.rotation.y = rng.range(0, 6.28);
+    cow.rotation.y = heading;
     cow.userData.phase = rng.range(0, 6.28);
     cows.push(cow);
     g.add(cow);
   }
   const tractor = makeCar(rng);
-  tractor.position.set(-lw * 0.05, 0, ld * 0.02);
-  tractor.rotation.y = rng.range(0, 3);
+  tractor.position.set(-lw * 0.36, 0, ld * 0.32);
+  tractor.rotation.y = Math.PI / 2;
   g.add(tractor);
 
   let busy = 0;
@@ -1105,11 +1136,11 @@ export function buildBusStation({ size, sign, rng }) {
     g.add(bench);
   }
   for (let i = 0; i < 3; i++) {
-    g.add(mesh(box(0.2, 0.06, 6), mat(0xf0eee4), { x: -lw * 0.3 + i * (lw * 0.3), y: 0.18, z: ld * 0.36, cast: false }));
+    g.add(mesh(box(0.2, 0.06, 6), mat(0xf0eee4), { x: -lw * 0.3 + i * (lw * 0.3), y: 0.18, z: ld * 0.32, cast: false }));
   }
 
   const bus = new THREE.Group();
-  bus.position.set(lw * 0.05, 0, ld * 0.34);
+  bus.position.set(lw * 0.05, 0, ld * 0.4);
   bus.add(mesh(roundedBox(9.5, 3, 2.6, 0.5), mat(0xf7f5ef), { y: 1.9 }));
   bus.add(mesh(box(9.6, 0.7, 2.64), mat(0x2f9e6b), { y: 1.2, cast: false }));
   for (const sz of [-1.33, 1.33]) {
@@ -1117,12 +1148,15 @@ export function buildBusStation({ size, sign, rng }) {
   }
   for (const sx of [-3.2, 3]) {
     for (const sz of [-1.2, 1.2]) {
+      // The bus body runs along X (unlike makeCar, which runs along Z), so the
+      // axles lie along Z. Rotating about Z instead would turn the wheels to
+      // face along the bus.
       const wheel = mesh(cylinder(0.55, 0.55, 0.34, 8), mat(0x2f3640), { x: sx, y: 0.55, z: sz, cast: false });
-      wheel.rotation.z = Math.PI / 2;
+      wheel.rotation.x = Math.PI / 2;
       bus.add(wheel);
     }
   }
-  bus.rotation.y = Math.PI / 2;
+  bus.rotation.y = 0;
   g.add(bus);
   g.userData.bus = bus;
   g.userData.busHome = bus.position.clone();
@@ -1168,7 +1202,7 @@ export function buildAirport({ size, sign, rng }) {
 
   // a small aircraft on the apron
   const plane = new THREE.Group();
-  plane.position.set(-lw * 0.14, 0, -ld * 0.06);
+  plane.position.set(-lw * 0.14, 0, -ld * 0.255);
   plane.add(mesh(roundedBox(2.6, 2.6, 12, 1.2), mat(0xf7f9fb), { y: 2.6 }));
   plane.add(mesh(box(13, 0.4, 3), mat(0xe9edf1), { y: 2.6, z: 0.6 }));
   plane.add(mesh(box(5, 0.35, 1.6), mat(0xe9edf1), { y: 3.2, z: -5 }));
@@ -1181,7 +1215,10 @@ export function buildAirport({ size, sign, rng }) {
   for (const [sx, sz] of [[-1, 3], [1, 3], [0, -3]]) {
     plane.add(mesh(cylinder(0.36, 0.36, 1.4, 6), mat(0x2f3640), { x: sx * 1.6, y: 0.7, z: sz }));
   }
-  plane.rotation.y = 0.3;
+  // Keep this compact jet aligned with the X-running apron. At full size its
+  // wings cannot clear both the terminal and this small lot, even edge-on.
+  plane.scale.setScalar(0.72);
+  plane.rotation.y = Math.PI / 2;
   g.add(plane);
   g.userData.plane = plane;
   g.userData.planeHome = plane.position.clone();
@@ -1206,18 +1243,19 @@ export function buildHotel({ size, sign, rng }) {
   return civicBlock({
     size, sign, rng, wall: 0xf6eddc, accent: 0x8a6340, storeys: 4,
     dressing: (g, { front }) => {
-      g.add(mesh(box(8, 0.5, 5), mat(0x8a6340), { y: 4.2, z: front + 3.4 }));
+      g.add(mesh(box(8, 0.5, 3), mat(0x8a6340), { y: 4.2, z: front + 1.5 }));
       for (const sx of [-3.4, 3.4]) {
-        g.add(mesh(cylinder(0.26, 0.26, 4.2, 8), mat(P.metal), { x: sx, y: 2.1, z: front + 5.5 }));
+        g.add(mesh(cylinder(0.26, 0.26, 4.2, 8), mat(P.metal), { x: sx, y: 2.1, z: front + 2.4 }));
       }
+      // Waiting at the kerb beside the canopy - never across the doorway.
       const taxi = makeCar(rng);
-      taxi.position.set(0, 0, front + 6.6);
+      taxi.position.set(5.6, 0, front + 2.7);
       taxi.rotation.y = Math.PI / 2;
       g.add(taxi);
       for (const sx of [-1, 1]) {
-        g.add(mesh(box(1.6, 0.8, 1.6), mat(0xd9d3c4), { x: sx * 5.4, y: 0.4, z: front + 2.4, cast: false }));
+        g.add(mesh(box(1.6, 0.8, 1.6), mat(0xd9d3c4), { x: sx * 5.4, y: 0.4, z: front + 1, cast: false }));
         const bush = makeBush(rng, 0.8);
-        bush.position.set(sx * 5.4, 0.8, front + 2.4);
+        bush.position.set(sx * 5.4, 0.8, front + 1);
         g.add(bush);
       }
     },
@@ -1253,19 +1291,21 @@ export function buildOwnerHouse({ size, sign, rng }) {
   bike.rotation.y = 1.2;
   g.add(bike);
   // mailbox with the family name on it
-  g.add(mesh(cylinder(0.09, 0.09, 1.2, 6), mat(P.woodDark), { x: -w * 0.42, y: 0.6, z: d / 2 + 2.6, cast: false }));
-  g.add(mesh(box(0.7, 0.5, 0.5), mat(0xd34b3f), { x: -w * 0.42, y: 1.35, z: d / 2 + 2.6, cast: false }));
-  const tree = makeTree(rng, { scale: 0.9 });
-  tree.position.set(w * 0.72, 0, -1.5);
+  const gardenFront = size[1] / 2 - 0.5;
+  g.add(mesh(cylinder(0.09, 0.09, 1.2, 6), mat(P.woodDark), { x: -w * 0.42, y: 0.6, z: gardenFront, cast: false }));
+  g.add(mesh(box(0.7, 0.5, 0.5), mat(0xd34b3f), { x: -w * 0.42, y: 1.35, z: gardenFront, cast: false }));
+  const tree = makeTree(rng, { scale: 0.65 });
+  tree.position.set(Math.min(w * 0.65, size[0] / 2 - 1), 0, -1.5);
   g.add(tree);
   for (let i = 0; i < 5; i++) {
     g.add(mesh(sphere(0.3, 6, 4), mat(rng.pick([0xff8fa3, 0xffd166, 0xc490e4])), {
-      x: -w * 0.2 + i * 1.1, y: 0.35, z: d / 2 + 2.2, cast: false,
+      x: -w * 0.2 + i * 1.1, y: 0.35, z: gardenFront, cast: false,
     }));
   }
+  // Clear of the porch roof (top 2.7) and below the upper windows (from 3.75).
   const plate = signPlane(sign, 3, 0.6, { bg: 'transparent', fg: '#3d5a6c' });
-  plate.position.set(w * 0.2, 2.45, d / 2 + 0.12);
+  plate.position.set(w * 0.2, 3.25, d / 2 + 0.12);
   g.add(plate);
-  g.add(mesh(box(3.1, 0.7, 0.08), mat(0xffffff), { x: w * 0.2, y: 2.45, z: d / 2 + 0.04, cast: false }));
+  g.add(mesh(box(3.1, 0.7, 0.08), mat(0xffffff), { x: w * 0.2, y: 3.25, z: d / 2 + 0.04, cast: false }));
   return g;
 }

@@ -8,11 +8,42 @@
  */
 
 export const WORLD = {
-  size: 230,            // terrain is size x size (the outer ring is scenery only)
-  flatRadius: 88,       // everything inside this is perfectly flat, playable ground
-  hillRadius: 124,      // hills rise between flatRadius and here
+  size: 290,            // compact outer terrain beyond the country-road belt
+  flatRadius: 136,      // keeps every road, parcel and paddy on level ground
+  hillRadius: 150,      // hills rise just beyond the working countryside
   seed: 20260823,
 };
+
+/**
+ * The only landmark and parcel dimensions used by the town. `envelope` is the
+ * usable local X/Z area supplied to a landmark builder; `plot` reserves the
+ * envelope plus a two-metre perimeter band for its developed sidewalk.
+ */
+export const LANDMARK_SIZE_CLASSES = Object.freeze({
+  small: Object.freeze({ rank: 0, envelope: Object.freeze([16, 14]), plot: Object.freeze([20, 18]) }),
+  medium: Object.freeze({ rank: 1, envelope: Object.freeze([22, 18]), plot: Object.freeze([26, 22]) }),
+  large: Object.freeze({ rank: 2, envelope: Object.freeze([28, 24]), plot: Object.freeze([32, 28]) }),
+  xl: Object.freeze({ rank: 3, envelope: Object.freeze([38, 28]), plot: Object.freeze([42, 32]) }),
+});
+
+export function sizeClassFor(name) {
+  const sizeClass = LANDMARK_SIZE_CLASSES[name];
+  if (!sizeClass) throw new Error(`Unknown landmark size class: ${name}`);
+  return sizeClass;
+}
+
+/** Shared authored dimensions for the station's town-spanning infrastructure. */
+export const RAILWAY = Object.freeze({
+  deckY: 11.2,
+  trackOffsetZ: -1.8,
+  deckWidth: 5.2,
+  deckThickness: 0.8,
+  pierOffsetZ: -3.5,
+});
+
+export function railwayWorldX(stationLot) {
+  return stationLot.pos[0] + RAILWAY.trackOffsetZ * Math.sin(stationLot.rot || 0);
+}
 
 /** Road widths by class. */
 export const ROAD_WIDTH = {
@@ -28,69 +59,62 @@ export const ROAD_WIDTH = {
  * pedestrian + vehicle network for free.
  */
 export const ROAD_SEGMENTS = [
-  // --- Main east-west high street (z = 0) ---
-  { a: [-62, 0], b: [-30, 0], w: 'main' },
-  { a: [-30, 0], b: [-14, 0], w: 'main' },
-  { a: [-14, 0], b: [2, 0], w: 'main' },
-  { a: [2, 0], b: [26, 0], w: 'main' },
-  { a: [26, 0], b: [62, 0], w: 'main' },
+  // The high street remains the town's one strong axis. Other streets bend,
+  // terminate and loop around the plots instead of completing a rigid grid.
+  { a: [-92, 0], b: [-54, 0], w: 'main' },
+  { a: [-54, 0], b: [-8, 0], w: 'main' },
+  { a: [-8, 0], b: [7, 0], w: 'main' },
+  { a: [7, 0], b: [60, 0], w: 'main' },
 
-  // --- Northern street (z = 28) ---
-  { a: [-46, 28], b: [-30, 28], w: 'minor' },
-  { a: [-30, 28], b: [-14, 28], w: 'minor' },
-  { a: [-14, 28], b: [2, 28], w: 'minor' },
-  { a: [2, 28], b: [26, 28], w: 'minor' },
-  { a: [26, 28], b: [46, 28], w: 'minor' },
+  // Gently crooked northern and southern neighbourhood streets.
+  { a: [-88, 48], b: [-54, 48], w: 'minor' },
+  { a: [-54, 48], b: [7, 50], w: 'minor' },
+  { a: [7, 50], b: [38, 48], w: 'minor' },
+  { a: [38, 48], b: [60, 44], w: 'minor' },
 
-  // --- Southern street (z = -26) ---
-  { a: [-52, -26], b: [-30, -26], w: 'minor' },
-  { a: [-30, -26], b: [-14, -26], w: 'minor' },
-  { a: [-14, -26], b: [2, -26], w: 'minor' },
-  { a: [2, -26], b: [26, -26], w: 'minor' },
-  { a: [26, -26], b: [44, -26], w: 'minor' },
+  { a: [-88, -48], b: [-54, -48], w: 'minor' },
+  { a: [-54, -48], b: [-14, -52], w: 'minor' },
+  { a: [-14, -52], b: [26, -50], w: 'minor' },
+  { a: [26, -50], b: [60, -44], w: 'minor' },
+  { a: [60, -44], b: [86, -34], w: 'minor' },
 
-  // --- Western avenue (x = -30) ---
-  { a: [-30, -44], b: [-30, -26], w: 'minor' },
-  { a: [-30, -26], b: [-30, 0], w: 'minor' },
-  { a: [-30, 0], b: [-30, 14], w: 'minor' },
-  { a: [-30, 14], b: [-30, 28], w: 'minor' },
-  { a: [-30, 28], b: [-30, 46], w: 'minor' },
+  // Back streets: a small western loop and an offset central connection.
+  { a: [-54, -48], b: [-54, 0], w: 'minor' },
+  { a: [-54, 0], b: [-54, 18], w: 'lane' },
+  { a: [-54, 18], b: [-58, 32], w: 'lane' },
+  { a: [-58, 32], b: [-54, 48], w: 'lane' },
 
-  // --- Central avenue (x = 2) ---
-  { a: [2, -48], b: [2, -26], w: 'main' },
-  { a: [2, -26], b: [2, 0], w: 'main' },
-  { a: [2, 0], b: [2, 14], w: 'main' },
-  { a: [2, 14], b: [2, 28], w: 'main' },
-  { a: [2, 28], b: [2, 50], w: 'main' },
+  { a: [-14, -52], b: [-8, -24], w: 'lane' },
+  { a: [-8, -24], b: [-8, 0], w: 'lane' },
+  { a: [-8, 0], b: [7, 10], w: 'lane' },
+  { a: [7, 10], b: [7, 50], w: 'lane' },
 
-  // --- Eastern avenue (x = 26) ---
-  { a: [26, -26], b: [26, 0], w: 'minor' },
-  { a: [26, 0], b: [26, 28], w: 'minor' },
-  { a: [26, 28], b: [26, 42], w: 'lane' },
+  // The east side is deliberately sparse. Its long diagonal is the shortcut
+  // past the station and into the northern fields.
+  { a: [60, -44], b: [60, 0], w: 'minor' },
+  { a: [60, 0], b: [60, 44], w: 'minor' },
+  { a: [60, 44], b: [86, 52], w: 'lane' },
+  { a: [86, 52], b: [100, 70], w: 'lane' },
 
-  // --- Neighbourhood back streets through the middle of town ---
-  { a: [-14, -26], b: [-14, 0], w: 'lane' },
-  { a: [-14, 0], b: [-14, 14], w: 'lane' },
-  { a: [-14, 14], b: [-14, 28], w: 'lane' },
-  { a: [-30, 14], b: [-14, 14], w: 'lane' },
-  { a: [-14, 14], b: [2, 14], w: 'lane' },
+  // Country lanes wander around the southern rice fields and stadium land.
+  { a: [-88, -48], b: [-112, -62], w: 'lane', rural: true },
+  { a: [-112, -62], b: [-93.5, -87.5], w: 'lane', rural: true },
+  { a: [-93.5, -87.5], b: [-64, -111], w: 'lane', rural: true },
+  { a: [-64, -111], b: [-11, -123.5], w: 'lane', rural: true },
+  { a: [-11, -123.5], b: [38, -118], w: 'lane', rural: true },
+  { a: [38, -118], b: [79.5, -98], w: 'lane', rural: true },
+  { a: [79.5, -98], b: [107, -67], w: 'lane', rural: true },
+  { a: [107, -67], b: [99, -50], w: 'lane', rural: true },
+  { a: [99, -50], b: [86, -34], w: 'lane', rural: true },
 
-  // --- Diagonal shortcut in the north-east (keeps the grid from feeling rigid) ---
-  { a: [26, 42], b: [46, 28], w: 'lane' },
-
-  // --- Country lanes: a loop around the southern fields and the stadium land ---
-  { a: [-52, -26], b: [-58, -44], w: 'lane' },
-  { a: [-58, -44], b: [-30, -44], w: 'lane' },
-  { a: [-30, -44], b: [2, -48], w: 'lane' },
-  { a: [2, -48], b: [2, -64], w: 'lane' },
-  { a: [2, -64], b: [50, -64], w: 'lane' },
-  { a: [44, -26], b: [50, -44], w: 'lane' },
-  { a: [50, -44], b: [50, -64], w: 'lane' },
-
-  // --- Country lanes in the north ---
-  { a: [-46, 28], b: [-48, 46], w: 'lane' },
-  { a: [-48, 46], b: [-30, 46], w: 'lane' },
-  { a: [-30, 46], b: [2, 50], w: 'lane' },
+  // A second loose loop serves the northern paddies and rejoins the diagonal.
+  { a: [-88, 48], b: [-112, 62], w: 'lane', rural: true },
+  { a: [-112, 62], b: [-93.5, 87.5], w: 'lane', rural: true },
+  { a: [-93.5, 87.5], b: [-64, 111], w: 'lane', rural: true },
+  { a: [-64, 111], b: [-11, 123.5], w: 'lane', rural: true },
+  { a: [-11, 123.5], b: [38, 118], w: 'lane', rural: true },
+  { a: [38, 118], b: [79.5, 98], w: 'lane', rural: true },
+  { a: [79.5, 98], b: [100, 70], w: 'lane', rural: true },
 ];
 
 /**
@@ -102,57 +126,91 @@ export const ROAD_SEGMENTS = [
  *  id       - stable key referenced by the landmark registry
  *  pos      - [x, z] centre
  *  rot      - Y rotation; the building front (+Z in local space) faces `entrance`
- *  size     - [width, depth] footprint the building may occupy
- *  category - which kind of landmark may claim this lot
+ *  plotClass- small / medium / large / xl physical reservation
+ *  size     - derived reserved plot [width, depth]
+ *  buildSize- derived usable landmark envelope [width, depth]
+ *  zones    - semantic site types this parcel may host
+ *  reservedFor - rare authored-site constraint
  *  entrance - [x, z] where pedestrians walk to when visiting
  */
-export const LANDMARK_LOTS = [
-  /* --- the original town-centre and near-town plots --- */
-  { id: 'lot-school', pos: [-48, 14], rot: Math.PI / 2, size: [26, 20], zones: ['civic', 'large', 'recreation'], entrance: [-33, 14] },
-  { id: 'lot-park', pos: [-48, -13], rot: Math.PI / 2, size: [26, 18], zones: ['recreation', 'large', 'civic'], entrance: [-33, -13] },
-  { id: 'lot-library', pos: [14.5, 15], rot: 0, size: [16, 16], zones: ['civic', 'medium'], entrance: [14.5, 25] },
-  { id: 'lot-hospital', pos: [14.5, -13], rot: Math.PI, size: [16, 16], zones: ['civic', 'medium'], entrance: [14.5, -24] },
-  { id: 'lot-museum', pos: [-14, 39], rot: Math.PI, size: [22, 12], zones: ['civic', 'medium'], entrance: [-14, 30] },
-  { id: 'lot-mall', pos: [15, 39], rot: Math.PI, size: [16, 12], zones: ['medium', 'small'], entrance: [15, 30] },
-  { id: 'lot-station', pos: [44, 15], rot: -Math.PI / 2, size: [26, 18], zones: ['transport', 'large'], entrance: [31, 15] },
-  { id: 'lot-stadium', pos: [24, -48], rot: 0, size: [36, 26], zones: ['large', 'recreation'], entrance: [24, -31] },
-  { id: 'lot-south-yard', pos: [-14, -36], rot: 0, size: [18, 12], zones: ['medium', 'small', 'recreation'], entrance: [-14, -30] },
+const LANDMARK_PLOTS = [
+  /* Town blocks. Two opposed small fronts share the north-west block.
+     `rot` is the bearing of the street each plot addresses, not a right angle:
+     buildings sit parallel to their road and flush against its pavement, so
+     lots on the diagonal country lanes are rotated to match. */
+  { id: 'small-center-west', plotClass: 'small', pos: [-44.1, 22.86], rot: -1.8491, zones: ['commercial', 'residential', 'civic'], entrance: [-51.6, 20.71] },
+  { id: 'small-center-east', plotClass: 'small', pos: [-3.85, 24], rot: 1.5708, zones: ['commercial', 'residential', 'civic'], entrance: [3.95, 24] },
+  { id: 'large-center-north', plotClass: 'large', pos: [30.33, 31.26], rot: 0.0644, zones: ['civic', 'recreation', 'commercial', 'transport'], entrance: [31.17, 44.33] },
+  { id: 'medium-center-south', plotClass: 'medium', pos: [-30.43, -36.09], rot: -3.0419, zones: ['civic', 'recreation', 'commercial', 'transport'], entrance: [-31.43, -46.14] },
+  { id: 'large-center-south', plotClass: 'large', pos: [20.26, -33.07], rot: 3.0916, zones: ['civic', 'recreation', 'commercial', 'transport', 'edge'], entrance: [20.91, -46.15] },
 
-  /* --- flexible plots added for the wider building pool --- */
-  { id: 'lot-north-yard', pos: [-44, 40], rot: 0, size: [16, 12], zones: ['small', 'medium', 'civic'], entrance: [-44, 45] },
-  { id: 'lot-northeast', pos: [38, 47], rot: Math.PI, size: [16, 12], zones: ['small', 'medium'], entrance: [38, 37] },
-  { id: 'lot-southeast', pos: [41, -52], rot: Math.PI / 2, size: [13, 12], zones: ['small', 'edge'], entrance: [47, -52] },
+  /* West-side plots keep development irregular and leave open agricultural ground. */
+  { id: 'medium-west-north', plotClass: 'medium', pos: [-69.73, 26.3], rot: 1.2925, zones: ['civic', 'commercial', 'residential'], entrance: [-60.31, 29] },
+  { id: 'medium-west-south', plotClass: 'medium', pos: [-68.2, -22], rot: 1.5708, zones: ['transport', 'commercial', 'edge', 'recreation'], entrance: [-58.1, -22] },
 
-  /* --- big open ground on the edge of town --- */
-  { id: 'lot-west-big', pos: [-62, 32], rot: Math.PI / 2, size: [24, 20], zones: ['large', 'recreation', 'edge'], entrance: [-50, 32] },
-  { id: 'lot-east-big', pos: [64, -8], rot: 0, size: [26, 22], zones: ['large', 'transport', 'edge'], entrance: [62, 3] },
-  { id: 'lot-south-big', pos: [-44, -54], rot: 0, size: [24, 18], zones: ['large', 'recreation', 'edge'], entrance: [-44, -45] },
-  { id: 'lot-north-big', pos: [-16, 60], rot: Math.PI, size: [24, 18], zones: ['large', 'edge', 'recreation'], entrance: [-16, 50] },
-  { id: 'lot-northeast-big', pos: [54, 44], rot: Math.PI, size: [20, 16], zones: ['edge', 'recreation', 'medium'], entrance: [50, 34] },
+  /* Outer northern row, all facing the same country-side street. */
+  { id: 'small-northwest', plotClass: 'small', pos: [-81, 60.2], rot: -3.1416, zones: ['commercial', 'residential', 'civic'], entrance: [-81, 52.1] },
+  { id: 'medium-northwest', plotClass: 'medium', pos: [-51.39, 62.29], rot: 3.1088, zones: ['civic', 'recreation', 'edge'], entrance: [-51.05, 52.2] },
+  { id: 'large-north', plotClass: 'large', pos: [-14.88, 66.49], rot: 3.1088, zones: ['civic', 'recreation', 'edge'], entrance: [-14.45, 53.4] },
+  { id: 'large-northeast', plotClass: 'large', pos: [23.24, 66.19], rot: -3.0772, zones: ['recreation', 'commercial', 'edge'], entrance: [22.4, 53.12] },
+  /* Set back 4m rather than flush: this corner is boxed in by the diagonal
+     lane, a second road and the viaduct, and nothing closer clears them all. */
+  { id: 'medium-northeast', plotClass: 'medium', pos: [62.21, 62.31], rot: 2.8431, zones: ['transport', 'commercial', 'edge', 'civic'], entrance: [66.27, 49.12] },
+
+  /* Outer southern row. The sole XL site stays open around the stadium. */
+  { id: 'small-southwest', plotClass: 'small', pos: [-81, -60.2], rot: 0, zones: ['commercial', 'residential'], entrance: [-81, -52.1] },
+  { id: 'medium-southwest', plotClass: 'medium', pos: [-51.08, -62.56], rot: 0.0997, zones: ['civic', 'recreation', 'edge'], entrance: [-50.07, -52.51] },
+  { id: 'large-south', plotClass: 'large', pos: [-15.71, -69.11], rot: 0.0997, zones: ['recreation', 'edge', 'civic'], entrance: [-14.41, -56.08] },
+  { id: 'xl-stadium', plotClass: 'xl', pos: [30.73, -68.66], rot: -0.1747, zones: ['recreation'], entrance: [28.11, -53.79], reservedFor: 'stadium' },
+
+  /* The authored station anchors a straight railway in the open eastern
+     corridor. It is the one plot whose position also places infrastructure -
+     `railwayWorldX()` derives the viaduct from it - so it keeps a forecourt
+     rather than sitting flush: pulling it to the kerb drags the elevated line
+     three metres west, straight over `medium-northeast`. */
+  { id: 'large-station', plotClass: 'large', pos: [80.2, 22], rot: -1.5708, zones: ['transport'], entrance: [64.1, 22], reservedFor: 'station' },
 ];
+
+/**
+ * All physical dimensions are derived from `plotClass`; parcel declarations
+ * carry no one-off sizes.
+ */
+export const LOT_SIDEWALK_WIDTH = (
+  LANDMARK_SIZE_CLASSES.small.plot[0] - LANDMARK_SIZE_CLASSES.small.envelope[0]
+) / 2;
+export const LANDMARK_LOTS = LANDMARK_PLOTS.map((lot) => ({
+  ...lot,
+  buildSize: [...sizeClassFor(lot.plotClass).envelope],
+  size: [...sizeClassFor(lot.plotClass).plot],
+}));
 
 /**
  * Rice paddies. Placed as blocks around the town edge; the generator skips any
  * plot that would collide with a road, a lot or another structure.
  */
 export const PADDY_FIELDS = [
-  { pos: [-54, 4], size: [20, 22] },
-  { pos: [-52, -50], size: [22, 18] },
-  { pos: [-16, -60], size: [30, 16] },
-  { pos: [54, -12], size: [18, 26] },
-  { pos: [46, 48], size: [26, 20] },
-  { pos: [-16, 62], size: [34, 16] },
-  { pos: [-54, 62], size: [20, 16] },
-  { pos: [62, -44], size: [14, 22] },
-  { pos: [26, 60], size: [22, 16] },
+  { pos: [-39, 101], size: [22, 18] },
+  { pos: [-10, 105], size: [22, 18] },
+  { pos: [19, 102], size: [16, 14] },
+  { pos: [-38.5, -101], size: [22, 18] },
+  { pos: [-10, -104], size: [22, 18] },
+  { pos: [19, -106], size: [18, 16] },
+  { pos: [-59, -96], size: [16, 14] },
+  { pos: [-112, 0], size: [20, 18] },
+  { pos: [112, 8], size: [14, 12] },
 ];
 
 /** Drainage channels that run beside the paddies. */
 export const CHANNELS = [
-  { a: [-66, 16], b: [-42, 16] },
-  { a: [-42, 16], b: [-42, -10] },
-  { a: [-16, -52], b: [-16, -34] },
-  { a: [-34, 58], b: [4, 58] },
+  { a: [-54, 91], b: [-30, 91] },
+  { a: [-22, 95], b: [2, 95] },
+  { a: [10, 94], b: [28, 94] },
+  { a: [-55, -91], b: [-31, -91] },
+  { a: [-22, -94], b: [2, -94] },
+  { a: [9, -97], b: [29, -97] },
+  { a: [-81, -88], b: [-63, -88] },
+  { a: [-101, -10], b: [-101, 10] },
+  { a: [103, 0], b: [103, 16] },
 ];
 
 /** Camera framing. */

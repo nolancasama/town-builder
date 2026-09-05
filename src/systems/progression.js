@@ -177,6 +177,18 @@ export function createProgression({ rng }) {
     noteBuilt,
     completeRun,
 
+    /**
+     * Debug control: make every place buildable at once. Persists exactly like
+     * a real unlock, so `resetAll()` is the way back to a normal profile.
+     * Returns how many places are now available.
+     */
+    unlockAll() {
+      unlocked = new Set(ALL_TYPES);
+      newly = new Set();
+      save();
+      return unlocked.size;
+    },
+
     /** Teacher control: wipe progression back to the starting set. */
     resetAll() {
       unlocked = new Set(DEFAULT_UNLOCKED);

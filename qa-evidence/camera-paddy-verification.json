@@ -1,0 +1,50 @@
+{
+  "cameraChecks": [
+    {
+      "type": "school",
+      "lot": "lot-school",
+      "rotation": 1.5707963267948966,
+      "expectedAzimuth": 1.5707963267948966,
+      "actualAzimuth": 1.5707963267948966,
+      "frontDot": 1,
+      "camera": [
+        -13.690281358316227,
+        31.405516628907396,
+        14
+      ]
+    },
+    {
+      "type": "library",
+      "lot": "lot-library",
+      "rotation": 0,
+      "expectedAzimuth": 0,
+      "actualAzimuth": 0,
+      "frontDot": 1,
+      "camera": [
+        14.5,
+        24.46951902230448,
+        40.066461108079466
+      ]
+    },
+    {
+      "type": "hospital",
+      "lot": "lot-hospital",
+      "rotation": 3.141592653589793,
+      "expectedAzimuth": 3.141592653589793,
+      "actualAzimuth": 3.141592653589793,
+      "frontDot": 1,
+      "camera": [
+        14.500000000000004,
+        27.66243722653611,
+        -38.066461108079466
+      ]
+    }
+  ],
+  "paddyAudit": {
+    "plotCount": 7,
+    "checked": 149,
+    "intrusionCount": 0,
+    "intrusions": []
+  },
+  "errors": []
+}

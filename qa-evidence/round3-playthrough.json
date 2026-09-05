@@ -1,0 +1,11 @@
+{
+  "phase": "finale",
+  "built": [
+    "gasStation"
+  ],
+  "sidewalkNames": [
+    "lot-sidewalk:lot-library"
+  ],
+  "openingNpcPresent": false,
+  "errors": []
+}

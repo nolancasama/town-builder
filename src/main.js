@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WORLD, CAMERA, LANDMARK_LOTS } from './config/town.js';
 import { LESSON, BUILD_TARGET, CHOICES_PER_ROUND } from './config/lessons.js';
-import { LANDMARKS, ALL_TYPES } from './config/landmarks.js';
+import { LANDMARKS, ALL_TYPES, configureHouseOwner } from './config/landmarks.js';
 import { makeRng } from './core/rng.js';
 import { updateTweens } from './core/tween.js';
 import { updateSway } from './core/materials.js';
@@ -25,6 +25,7 @@ import { createTourRecords } from './systems/tourRecords.js';
 import { createGuidedTour } from './systems/guidedTour.js';
 import { createProgression } from './systems/progression.js';
 import { createUnlockReveal } from './systems/unlockReveal.js';
+import { createOpeningScene } from './systems/openingScene.js';
 import { wait } from './core/tween.js';
 
 /**
@@ -75,7 +76,7 @@ class Game {
    * Boot
    * ------------------------------------------------------------------ */
 
-  async init() {
+  async init(playerName = 'Ken') {
     this.hud = createHUD({
       onMic: () => this.onMicPressed(),
       onBack: () => this.offerChoices(),
@@ -124,6 +125,8 @@ class Game {
     this.particles = createParticles(this.scene);
     this.pedestrians = createPedestrians(this.scene, this.world.graph, this.rng, { max: 70 });
     this.vehicles = createVehicles(this.scene, this.world.graph, this.rng, { maxCars: 16, maxBikes: 10 });
+    this.pedestrians.setVehicles(this.vehicles);
+    this.vehicles.setPedestrians(this.pedestrians);
     this.audio = createAudio();
 
     this.speech = createSpeech({
@@ -166,6 +169,16 @@ class Game {
     });
 
     this.unlockReveal = createUnlockReveal({ rng: this.rng, hud: this.hud });
+    const openingLot = LANDMARK_LOTS.find((lot) => lot.id === 'large-center-north');
+    this.openingScene = createOpeningScene({
+      scene: this.scene,
+      rig: this.rig,
+      hud: this.hud,
+      rng: makeRng(WORLD.seed ^ 0x4f50454e),
+      lot: openingLot,
+      pedestrians: this.pedestrians,
+      skip: params.get('skipIntro') === '1',
+    });
 
     if (!this.speech.supported) {
       // Firefox and Safari have no Web Speech API. Say so plainly rather than
@@ -177,22 +190,54 @@ class Game {
     this.hud.setLoading(1);
     this.updateLiveliness(true);
     this.progression.startRun(TARGET);
-    this.offerChoices();
+    this.phase = 'opening';
 
     window.addEventListener('resize', () => this.onResize());
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) this.clock.getDelta();
     });
     if (DEV) {
+      // Keyed off `event.code` + shiftKey rather than `event.key`, so the
+      // shortcut does not depend on case or keyboard layout.
+      const isTyping = (el) => el instanceof HTMLInputElement
+        || el instanceof HTMLTextAreaElement || el?.isContentEditable;
       window.addEventListener('keydown', (e) => {
-        if (e.key !== 'b') return;
-        if (this.phase === 'choosing') this.chooseType(this.offered[0]);
-        else if (this.phase === 'ready') this.succeed();
+        if (!e.shiftKey || e.repeat || isTyping(e.target)) return;
+
+        // shift+B - skip speaking: pick the first card, or accept the sentence.
+        // Also works while the mic is listening, which is when it is wanted.
+        if (e.code === 'KeyB') {
+          e.preventDefault();
+          if (this.phase === 'choosing') this.chooseType(this.offered[0]);
+          else if (this.phase === 'listening') { this.speech?.abort?.(); this.succeed(); }
+          else if (this.phase === 'ready') this.succeed();
+          return;
+        }
+        // shift+U - unlock every place, then re-deal so the full pool shows now
+        if (e.code === 'KeyU') {
+          e.preventDefault();
+          const total = this.progression.unlockAll();
+          console.info(`[debug] all ${total} places unlocked - shift+R resets`);
+          if (this.phase === 'choosing') this.offerChoices();
+          return;
+        }
+        // shift+R - back to a normal fresh profile
+        if (e.code === 'KeyR') {
+          e.preventDefault();
+          this.progression.resetAll();
+          this.progression.startRun(TARGET);
+          console.info('[debug] progression reset to the starting set');
+          if (this.phase === 'choosing') this.offerChoices();
+        }
       });
     }
 
+    this.hud.enterOpeningMode(true);
     this.hud.hideLoading();
     this.loop();
+    await this.openingScene.play(playerName);
+    this.hud.enterOpeningMode(false);
+    this.offerChoices();
   }
 
   nextFrame() {
@@ -434,8 +479,10 @@ class Game {
       dressing,
       def: LANDMARKS[type],
       onSettled: () => {
-        // people start visiting the moment it is finished
-        this.pedestrians.addAttraction(lot.entrance[0], lot.entrance[1]);
+        // The walk belongs to the developed landmark, not the vacant field.
+        // Add it at settlement so pedestrians can use it immediately.
+        this.world.addLotSidewalk(lot);
+        this.pedestrians.addAttraction(lot.entrance[0], lot.entrance[1], lot.rot);
         this.updateLiveliness();
       },
     });
@@ -566,9 +613,7 @@ class Game {
     if (result.ok) {
       this.hud.setTourMicState('success');
       this.hud.setTourStatus('Great!', true);
-      this.hud.tourCorrect(
-        `We can <span class="blank">${result.matched}</span> in the <span class="place-word">${def.spokenName}</span>.`
-      );
+      this.hud.tourCorrect(result.matched, def);
       this.tour.accept(type);
       // The sentence and the child's voice are kept for the guided tour; the
       // building's special animation is held back until they present it there.
@@ -735,6 +780,7 @@ class Game {
     this.built = [];
     this.takenLots.clear();
     this.pedestrians.clearAttractions();
+    this.world.clearLotSidewalks();
 
     // put the empty lots back exactly as they started
     for (const lot of LANDMARK_LOTS) {
@@ -834,6 +880,7 @@ class Game {
     this.activities.update(dt, this.elapsed);
     this.guidedTour.update(dt);
     this.unlockReveal.update(dt);
+    this.openingScene?.update(dt);
     this.world.update(dt, this.elapsed);
     updateSway(this.elapsed);
     for (const animate of this.animated) animate(dt, this.elapsed);
@@ -848,10 +895,25 @@ class Game {
 }
 
 const game = new Game();
-game.init().catch((err) => {
-  console.error(err);
-  const status = document.getElementById('mic-status');
-  if (status) status.textContent = 'Something went wrong loading the town.';
+const nameEntry = document.getElementById('name-entry');
+const nameForm = document.getElementById('name-form');
+const playerName = document.getElementById('player-name');
+const loading = document.getElementById('loading');
+
+if (params.get('owner')) playerName.value = params.get('owner');
+
+nameForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (nameForm.dataset.started) return;
+  nameForm.dataset.started = 'true';
+  const owner = configureHouseOwner(playerName.value);
+  nameEntry.remove();
+  loading.classList.remove('hidden');
+  game.init(owner).catch((err) => {
+    console.error(err);
+    const status = document.getElementById('mic-status');
+    if (status) status.textContent = 'Something went wrong loading the town.';
+  });
 });
 
 if (DEV) window.game = game;

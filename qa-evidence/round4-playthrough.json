@@ -1,0 +1,9 @@
+{
+  "phase": "guided-end",
+  "built": [
+    "bank"
+  ],
+  "sidewalkCount": 1,
+  "openingNpcPresent": false,
+  "errors": []
+}

@@ -1,0 +1,17 @@
+{
+  "target": 8,
+  "completed": true,
+  "phase": "finale",
+  "built": [
+    "station",
+    "hospital",
+    "library",
+    "gym",
+    "hotel",
+    "bookstore",
+    "restaurant",
+    "cafe"
+  ],
+  "durationSeconds": 146.4,
+  "consoleErrors": []
+}

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { WORLD } from '../config/town.js';
+import { WORLD, LANDMARK_LOTS, RAILWAY, railwayWorldX } from '../config/town.js';
 import { buildRoadGraph } from './graph.js';
 import { createTerrain, createPaddies, createChannels } from './terrain.js';
-import { createRoads } from './roads.js';
+import { createRoads, createLotSidewalk } from './roads.js';
 import { Occupancy, createScenery, createTreeScatter, createLotDressings } from './scenery.js';
 import { createSky, createClouds, createBirds } from './sky.js';
 
@@ -20,9 +20,12 @@ export function buildWorld(scene, rng, onProgress = () => {}) {
   const graph = buildRoadGraph();
   const occ = new Occupancy(graph);
 
-  // The railway viaduct runs well past the station lot, so reserve its corridor
-  // before anything else is placed under it.
-  for (let z = -22; z <= 46; z += 6) occ.add(44, z, 7);
+  // The railway viaduct spans the full terrain. Reserve its actual authored
+  // corridor before scenery instead of leaving a stale hard-coded strip.
+  const stationLot = LANDMARK_LOTS.find((lot) => lot.reservedFor === 'station');
+  const railX = railwayWorldX(stationLot);
+  const railReserve = RAILWAY.deckWidth / 2 + 2;
+  for (let z = -WORLD.size / 2; z <= WORLD.size / 2; z += 6) occ.add(railX, z, railReserve);
 
   const ground = createTerrain(scene);
   onProgress(0.3);
@@ -30,7 +33,7 @@ export function buildWorld(scene, rng, onProgress = () => {}) {
   const dressings = createLotDressings(scene, rng, occ);
   onProgress(0.4);
 
-  createPaddies(scene, rng, (x, z, r) => occ.blocked(x, z, r, 3));
+  createPaddies(scene, rng, occ);
   createChannels(scene);
   onProgress(0.55);
 
@@ -45,12 +48,28 @@ export function buildWorld(scene, rng, onProgress = () => {}) {
 
   const clouds = createClouds(scene, rng, 9);
   const birds = createBirds(scene, rng);
+  const lotSidewalks = new Map();
 
   return {
     graph,
     occ,
     ground,
     dressings,
+    /** Add the street frontage only when construction has claimed this lot. */
+    addLotSidewalk(lot) {
+      if (lotSidewalks.has(lot.id)) return lotSidewalks.get(lot.id);
+      const sidewalk = createLotSidewalk(scene, graph, lot);
+      if (sidewalk) lotSidewalks.set(lot.id, sidewalk);
+      return sidewalk;
+    },
+    /** Restore every developed plot to open ground for an in-place replay. */
+    clearLotSidewalks() {
+      for (const sidewalk of lotSidewalks.values()) {
+        scene.remove(sidewalk);
+        sidewalk.geometry.dispose();
+      }
+      lotSidewalks.clear();
+    },
     sceneryStats: scenery.stats,
     update(dt, time) {
       clouds.update(dt);
