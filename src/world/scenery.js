@@ -65,6 +65,20 @@ export class Occupancy {
     if (this.graph.distanceToRoad(x, z) < roadClearance) return true;
     return this.overlapsReserved(x, z, r);
   }
+
+  /**
+   * Does every sampled point of a building's real footprint clear the road by
+   * `clearance`? `blocked()` deliberately measures road distance from the centre
+   * only, which lets a deep building - or one with a porch, step or planter out
+   * front - keep its centre on the plot while its frontage stands on the
+   * sidewalk. This tests the actual outline instead.
+   */
+  footprintClearsRoad(points, clearance) {
+    for (const p of points) {
+      if (this.graph.distanceToRoad(p[0], p[1]) < clearance) return false;
+    }
+    return true;
+  }
 }
 
 const SHOP_LABELS = ['MARKET', 'BAKERY', 'CAFE', 'RAMEN', 'FLOWERS', 'BOOKS', 'CYCLES', 'POST'];
@@ -85,6 +99,49 @@ function horizontalRadius(bounds, x, z) {
   const dx = Math.max(Math.abs(bounds.min.x - x), Math.abs(bounds.max.x - x));
   const dz = Math.max(Math.abs(bounds.min.z - z), Math.abs(bounds.max.z - z));
   return Math.hypot(dx, dz);
+}
+
+/**
+ * Sample points around an object's true footprint, rotated into world space.
+ *
+ * `local` must be the object's bounds while it still sits unrotated at the
+ * origin. Rotating those corners gives the real oriented outline; taking the
+ * world AABB of an already-rotated object instead would overstate the extent on
+ * the diagonal and push buildings needlessly far back from the street.
+ */
+function footprintCorners(local, x, z, rotY) {
+  const cos = Math.cos(rotY);
+  const sin = Math.sin(rotY);
+  const mx = (local.min.x + local.max.x) * 0.5;
+  const mz = (local.min.z + local.max.z) * 0.5;
+  const pts = [];
+  for (const lx of [local.min.x, mx, local.max.x]) {
+    for (const lz of [local.min.z, mz, local.max.z]) {
+      pts.push([x + lx * cos + lz * sin, z - lx * sin + lz * cos]);
+    }
+  }
+  return pts;
+}
+
+/**
+ * How far a building may be slid back from the kerb before it is abandoned.
+ * Generous on purpose: rejecting instead of sliding costs a third of the town's
+ * buildings, and a house set a little deeper into its plot still reads as
+ * frontage, while a missing house reads as a hole in the street.
+ */
+const MAX_PUSHBACK = 4.2;
+
+/**
+ * Unit vector pointing directly away from the nearest road, from the local
+ * gradient of distanceToRoad(). Used by the scatter pass, where buildings sit at
+ * arbitrary angles and there is no frontage normal to slide along.
+ */
+function awayFromRoad(graph, x, z) {
+  const e = 0.5;
+  const gx = graph.distanceToRoad(x + e, z) - graph.distanceToRoad(x - e, z);
+  const gz = graph.distanceToRoad(x, z + e) - graph.distanceToRoad(x, z - e);
+  const len = Math.hypot(gx, gz);
+  return len < 1e-4 ? null : { x: gx / len, z: gz / len };
 }
 
 function reserveBounds(occ, bounds) {
@@ -118,21 +175,46 @@ export function createScenery(scene, rng, graph, occ) {
         const gapChance = e.rural ? 0.88 : (e.cls === 'lane' ? 0.3 : 0.1);
         if (rng.chance(gapChance)) { stats.skipped++; continue; }
 
-        const setback = e.width / 2 + SIDEWALK + rng.range(2.6, 4.2);
-        const x = e.a.pos.x + e.dir.x * t + e.right.x * side * setback;
-        const z = e.a.pos.y + e.dir.y * t + e.right.y * side * setback;
-        if (occ.blocked(x, z, 3.4, 2.2)) {
-          if (occ.graph.distanceToRoad(x, z) < 2.2) stats.blockedRoad++; else stats.blockedRect++;
+        const baseSetback = e.width / 2 + SIDEWALK + rng.range(2.6, 4.2);
+        // Origin on the centre line, and the unit normal pointing away from it.
+        const ox = e.a.pos.x + e.dir.x * t;
+        const oz = e.a.pos.y + e.dir.y * t;
+        const nx = e.right.x * side;
+        const nz = e.right.y * side;
+        if (occ.blocked(ox + nx * baseSetback, oz + nz * baseSetback, 3.4, 2.2)) {
+          if (occ.graph.distanceToRoad(ox + nx * baseSetback, oz + nz * baseSetback) < 2.2) {
+            stats.blockedRoad++;
+          } else stats.blockedRect++;
           continue;
         }
 
         // face the road: the building front (+Z) points back toward the centre line
-        const facing = Math.atan2(-e.right.x * side, -e.right.y * side);
+        const facing = Math.atan2(-nx, -nz);
 
         const isShopArea = e.cls === 'main' && rng.chance(0.55);
         const b = isShopArea
           ? makeShop(rng, rng.chance(0.7) ? SHOP_LABELS[shopLabel++ % SHOP_LABELS.length] : null)
           : makeHouse(rng);
+
+        // Measure the building before it is placed, then slide it straight back
+        // from the kerb until its whole outline - porch, step and planter
+        // included - is off the sidewalk. Sliding rather than rejecting keeps the
+        // frontage as dense as it was while clearing the walking surface.
+        const local = placementBounds(b);
+        let setback = baseSetback;
+        while (
+          setback - baseSetback <= MAX_PUSHBACK &&
+          !occ.footprintClearsRoad(
+            footprintCorners(local, ox + nx * setback, oz + nz * setback, facing),
+            SIDEWALK
+          )
+        ) {
+          setback += 0.35;
+        }
+        if (setback - baseSetback > MAX_PUSHBACK) { stats.blockedRoad++; continue; }
+
+        const x = ox + nx * setback;
+        const z = oz + nz * setback;
         b.position.set(x, 0, z);
         b.rotation.y = facing;
         const bounds = placementBounds(b);
@@ -169,7 +251,10 @@ export function createScenery(scene, rng, graph, occ) {
   // Back-lot infill: the frontage pass alone leaves block interiors hollow, so
   // a scatter pass drops extra houses anywhere that is still free but close
   // enough to a street to be plausible.
-  for (let i = 0; i < 260; i++) {
+  // Attempt count is generous because candidates are now rejected for sidewalk
+  // overhang as well as overlap; more tries keeps the block interiors as full as
+  // they were before that rule existed. This runs once, at world build.
+  for (let i = 0; i < 460; i++) {
     const a = rng.range(0, Math.PI * 2);
     const r = Math.sqrt(rng()) * 62;
     const x = Math.cos(a) * r;
@@ -178,17 +263,37 @@ export function createScenery(scene, rng, graph, occ) {
     if (toRoad > 15 || toRoad < 2.5) continue;
     if (occ.blocked(x, z, 3.6, 2.5)) continue;
     const b = rng.chance(0.12) ? makeShop(rng) : makeHouse(rng);
-    b.position.set(x, 0, z);
-    b.rotation.y = rng.range(0, Math.PI * 2);
+    const local = placementBounds(b);
+    const out = awayFromRoad(graph, x, z);
+    if (!out) continue;
+    // Turn the front door toward the nearest street. These used to take a random
+    // yaw, which left back-lot homes presenting a blank side or rear wall to the
+    // sidewalk people actually walk along. A little jitter keeps the row from
+    // looking mechanically aligned.
+    const facing = Math.atan2(-out.x, -out.z) + rng.range(-0.14, 0.14);
+    let px = x;
+    let pz = z;
+    let pushed = 0;
+    while (
+      pushed <= MAX_PUSHBACK &&
+      !occ.footprintClearsRoad(footprintCorners(local, px, pz, facing), SIDEWALK)
+    ) {
+      pushed += 0.35;
+      px = x + out.x * pushed;
+      pz = z + out.z * pushed;
+    }
+    if (!occ.footprintClearsRoad(footprintCorners(local, px, pz, facing), SIDEWALK)) continue;
+    b.position.set(px, 0, pz);
+    b.rotation.y = facing;
     const bounds = placementBounds(b);
-    if (occ.blocked(x, z, horizontalRadius(bounds, x, z), 2.5)) continue;
+    if (occ.blocked(px, pz, horizontalRadius(bounds, px, pz), 2.5)) continue;
     buildings.add(b);
     stats.placed++;
     reserveBounds(occ, bounds);
     if (rng.chance(0.4)) {
       const t = makeTree(rng, { scale: 0.8 });
-      const tx = x + rng.range(-6, 6);
-      const tz = z + rng.range(-6, 6);
+      const tx = px + rng.range(-6, 6);
+      const tz = pz + rng.range(-6, 6);
       placeAt(t, tx, tz);
       const treeBounds = placementBounds(t);
       if (!occ.blocked(tx, tz, horizontalRadius(treeBounds, tx, tz), 1.6)) {
