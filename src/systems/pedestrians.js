@@ -24,6 +24,8 @@ const SIDEWALK_OFFSET_MIN = 1.0;
 const SIDEWALK_OFFSET_MAX = 1.9;
 const DOOR_CLEARANCE = 0.48;
 const RETIREMENT_EXIT_DISTANCE = 24;
+const TRAFFIC_CELL_SIZE = 8;
+const TRAFFIC_BODY_CLEARANCE = 0.4;
 
 export function makePerson(rng, { camera = null, allowRare = false } = {}) {
   const character = createCharacterModel(rng, { camera, allowRare });
@@ -78,6 +80,8 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
   const builtOccupancy = new Occupancy(graph);
   let vehicles = null;
   const tmp = new THREE.Vector2();
+  const trafficBuckets = new Map();
+  let previousUpdateAt = performance.now();
   const dirV = new THREE.Vector3();
   const viewPoint = new THREE.Vector3();
   const graphCentre = graph.nodes.reduce((centre, node) => {
@@ -236,7 +240,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       p.lateral = edge.width / 2 + rng.range(SIDEWALK_OFFSET_MIN, SIDEWALK_OFFSET_MAX);
       graph.pointOn(p.edge, p.t, p.forward, p.lateral, tmp);
       if (!builtOccupancy.overlapsReserved(tmp.x, tmp.y, 0.38)
-        && !vehicles?.hasAgentNear(tmp.x, tmp.y, 2.2)) break;
+        && !vehicles?.hasAgentNear(tmp.x, tmp.y, TRAFFIC_BODY_CLEARANCE)) break;
     }
     p.speed = rng.range(1.5, 2.5);
     p.state = 'walking';
@@ -307,6 +311,46 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
 
   function inCarriageway(x, z) {
     return graph.distanceToRoad(x, z) <= 0.8;
+  }
+
+  function bucketKey(x, z) {
+    return `${Math.floor(x / TRAFFIC_CELL_SIZE)}:${Math.floor(z / TRAFFIC_CELL_SIZE)}`;
+  }
+
+  function rebuildTrafficBuckets() {
+    trafficBuckets.clear();
+    for (const p of active) {
+      const key = bucketKey(p.group.position.x, p.group.position.z);
+      let bucket = trafficBuckets.get(key);
+      if (!bucket) {
+        bucket = [];
+        trafficBuckets.set(key, bucket);
+      }
+      bucket.push(p);
+    }
+  }
+
+  function nearbyPedestrians(x, z, radius) {
+    const nearby = [];
+    const minX = Math.floor((x - radius) / TRAFFIC_CELL_SIZE);
+    const maxX = Math.floor((x + radius) / TRAFFIC_CELL_SIZE);
+    const minZ = Math.floor((z - radius) / TRAFFIC_CELL_SIZE);
+    const maxZ = Math.floor((z + radius) / TRAFFIC_CELL_SIZE);
+    for (let cellX = minX; cellX <= maxX; cellX++) {
+      for (let cellZ = minZ; cellZ <= maxZ; cellZ++) {
+        const bucket = trafficBuckets.get(`${cellX}:${cellZ}`);
+        if (bucket) nearby.push(...bucket);
+      }
+    }
+    return nearby;
+  }
+
+  function crossingAgent(p) {
+    const leavingSidewalk = p.state === 'junction' || p.state === 'toEntrance'
+      || p.state === 'returning' || p.state === 'rejoining'
+      || p.state === 'trafficRetreat' || p.state === 'retiring';
+    const atJunction = p.state === 'walking' && Math.min(p.t, p.edge.length - p.t) < 5;
+    return leavingSidewalk || atJunction;
   }
 
   function clearTrafficYield(p) {
@@ -393,9 +437,8 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       rejoinNearestSidewalk(p, { turnAround: true });
       return false;
     }
-    if (p.trafficEscapeTime <= 0
-      && inCarriageway(tmp.x, tmp.y)
-      && vehicles?.hasAgentNear(tmp.x, tmp.y, 1.8)
+    if (inCarriageway(tmp.x, tmp.y)
+      && vehicles?.hasAgentNear(tmp.x, tmp.y, TRAFFIC_BODY_CLEARANCE)
       && yieldToTraffic(p, dt)) {
       return false;
     }
@@ -553,9 +596,9 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
     const step = Math.min(dist, p.speed * dt);
     const nx = p.group.position.x + dirV.x * step;
     const nz = p.group.position.z + dirV.z * step;
-    if (!ignoreTraffic && p.trafficEscapeTime <= 0
+    if (!ignoreTraffic
       && inCarriageway(nx, nz)
-      && vehicles?.hasAgentNear(nx, nz, 1.8)
+      && vehicles?.hasAgentNear(nx, nz, TRAFFIC_BODY_CLEARANCE)
       && yieldToTraffic(p, dt)) {
       p.wasMoving = false;
       return false;
@@ -703,6 +746,26 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
     rememberSafeTrafficPoint(p);
   }
 
+  function restoreRoadAfterTrafficRetreat(p) {
+    const safe = p.retreatRoad;
+    if (!safe) {
+      rejoinNearestSidewalk(p, { turnAround: true });
+      return;
+    }
+    // The retreat ends at this exact saved graph point. Reusing it avoids the
+    // nearest-road ambiguity at junctions, where a fresh search can choose the
+    // crossing road and send the walker straight back into the same car.
+    p.edge = safe.edge;
+    p.forward = !safe.forward;
+    p.t = p.edge.length - safe.t;
+    p.lateral = -safe.lateral;
+    p.state = 'walking';
+    p.retreatRoad = null;
+    p.trafficEscapeTime = 0.8;
+    clearTrafficYield(p);
+    rememberSafeTrafficPoint(p);
+  }
+
   function restoreVisitOrigin(p) {
     const origin = p.visitOrigin;
     if (!origin) {
@@ -781,6 +844,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
           surplus--;
         }
       }
+      rebuildTrafficBuckets();
     },
 
     /**
@@ -835,6 +899,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       group.userData.yielding = false;
       rejoinNearestSidewalk(p);
       active.push(p);
+      rebuildTrafficBuckets();
       return p;
     },
 
@@ -869,14 +934,12 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
     /** Used only by cars near junctions, so mutual avoidance stays cheap. */
     hasCrossingNear(x, z, radius = 2.8) {
       const rr = radius * radius;
-      for (const p of active) {
+      for (const p of nearbyPedestrians(x, z, radius)) {
         if (p.yielding) continue;
-        const leavingSidewalk = p.state === 'junction' || p.state === 'toEntrance'
-          || p.state === 'returning' || p.state === 'trafficRetreat'
-          || p.state === 'retiring';
-        const atJunction = p.state === 'walking' && Math.min(p.t, p.edge.length - p.t) < 5;
-        if (!leavingSidewalk && !atJunction) continue;
-        if (graph.distanceToRoad(p.group.position.x, p.group.position.z) > 0.8) continue;
+        if (!crossingAgent(p)) continue;
+        // Include a walker poised on the kerb, not just one who has already
+        // stepped into the carriageway. That gives the car time to ease down.
+        if (graph.distanceToRoad(p.group.position.x, p.group.position.z) > 2.1) continue;
         const dx = p.group.position.x - x;
         const dz = p.group.position.z - z;
         if (dx * dx + dz * dz < rr) return true;
@@ -886,13 +949,9 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
 
     hasAgentNear(x, z, radius) {
       const rr = radius * radius;
-      return active.some((p) => {
+      return nearbyPedestrians(x, z, radius).some((p) => {
         if (p.yielding) return false;
-        const leavingSidewalk = p.state === 'junction' || p.state === 'toEntrance'
-          || p.state === 'returning' || p.state === 'trafficRetreat'
-          || p.state === 'retiring';
-        const atJunction = p.state === 'walking' && Math.min(p.t, p.edge.length - p.t) < 5;
-        if (!leavingSidewalk && !atJunction) return false;
+        if (!crossingAgent(p)) return false;
         if (!inCarriageway(p.group.position.x, p.group.position.z)) return false;
         const dx = p.group.position.x - x;
         const dz = p.group.position.z - z;
@@ -900,13 +959,36 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       });
     },
 
+    /** Test the actual oriented vehicle body, rather than its centre point. */
+    hasAgentInVehiclePath(x, z, heading, length, margin = TRAFFIC_BODY_CLEARANCE) {
+      const halfWidth = 0.95 + margin;
+      const halfLength = length / 2 + margin;
+      const cosine = Math.cos(heading);
+      const sine = Math.sin(heading);
+      return nearbyPedestrians(x, z, Math.hypot(halfWidth, halfLength)).some((p) => {
+        if (!crossingAgent(p) || !inCarriageway(p.group.position.x, p.group.position.z)) return false;
+        const dx = p.group.position.x - x;
+        const dz = p.group.position.z - z;
+        const localX = dx * cosine - dz * sine;
+        const localZ = dx * sine + dz * cosine;
+        return Math.abs(localX) < halfWidth && Math.abs(localZ) < halfLength;
+      });
+    },
+
     update(dt) {
+      const updateNow = performance.now();
+      // The main loop deliberately clamps simulation dt for stability. Escape
+      // valves must still expire in real time on a struggling Chromebook, and
+      // a retreat should cover walking-speed distance rather than taking ten
+      // wall-clock seconds under a 2-3 fps diagnostic renderer.
+      const wallDt = Math.min(0.5, Math.max(dt, (updateNow - previousUpdateAt) / 1000));
+      previousUpdateAt = updateNow;
       const activeCamera = camera || globalThis.window?.game?.camera;
       activeCamera?.updateMatrixWorld();
       for (const p of active) {
         p.visitCooldown -= dt;
-        p.trafficEscapeTime = Math.max(0, (p.trafficEscapeTime || 0) - dt);
-        p.reservedEscapeTime = Math.max(0, (p.reservedEscapeTime || 0) - dt);
+        p.trafficEscapeTime = Math.max(0, (p.trafficEscapeTime || 0) - wallDt);
+        p.reservedEscapeTime = Math.max(0, (p.reservedEscapeTime || 0) - wallDt);
         switch (p.state) {
           case 'walking':
             if (p.trafficEscapeTime <= 0
@@ -921,21 +1003,26 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
               break;
             }
             clearTrafficYield(p);
+            {
+              const previousT = p.t;
             p.t += p.speed * dt;
             if (p.t >= p.edge.length) {
               p.t = p.edge.length;
               if (updateWalkPosition(p, dt)) arriveAtNode(p);
               else {
+                p.t = previousT;
                 animateWalk(p, dt, false);
                 break;
               }
             } else {
               if (!updateWalkPosition(p, dt)) {
+                p.t = previousT;
                 animateWalk(p, dt, false);
                 break;
               }
             }
             animateWalk(p, dt, true);
+            }
             break;
 
           case 'idle':
@@ -1002,13 +1089,13 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
           }
 
           case 'trafficRetreat': {
-            const retreated = moveToward(p, dt, p.target, {
+            const retreated = moveToward(p, wallDt, p.target, {
               ignoreTraffic: true,
               ignoreReserved: true,
             });
             animateWalk(p, dt, p.wasMoving);
             if (retreated && p.state === 'trafficRetreat') {
-              rejoinNearestSidewalk(p, { turnAround: true });
+              restoreRoadAfterTrafficRetreat(p);
             }
             break;
           }
@@ -1035,6 +1122,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
         p.group.userData.retiring = Boolean(p.retiring);
       }
       poolFinishedRetirements();
+      rebuildTrafficBuckets();
     },
   };
 }

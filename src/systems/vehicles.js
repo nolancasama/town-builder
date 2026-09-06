@@ -4,6 +4,9 @@ import { mat, box, sphere, mesh } from '../core/materials.js';
 
 const MAX_TRAFFIC_YIELD_MS = 1800;
 const VEHICLE_PRIORITY_DISTANCE = 3.2;
+const TRAFFIC_CELL_SIZE = 8;
+const CAR_WIDTH = 1.9;
+const PEDESTRIAN_CLEARANCE = 0.4;
 
 /**
  * VEHICLES
@@ -36,6 +39,7 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
   const active = [];
   let pedestrians = null;
   const tmp = new THREE.Vector2();
+  const trafficBuckets = new Map();
 
   // cars avoid the narrowest country lanes so they never look wedged in
   const drivable = graph.edgesOfClass(['main', 'minor']);
@@ -76,7 +80,14 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       v.t = rng.range(0, edge.length);
       setLateral(v);
       place(v, true);
-      if (!pedestrians?.hasAgentNear(v.group.position.x, v.group.position.z, 2.2)) break;
+      const length = v.kind === 'car' ? (v.group.userData.length || 3.8) : 1.3;
+      if (!pedestrians?.hasAgentInVehiclePath(
+        v.group.position.x,
+        v.group.position.z,
+        v.group.rotation.y,
+        length,
+        PEDESTRIAN_CLEARANCE
+      )) break;
     }
   }
 
@@ -105,6 +116,51 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       void prevX;
       void prevZ;
     }
+  }
+
+  function bucketKey(x, z) {
+    return `${Math.floor(x / TRAFFIC_CELL_SIZE)}:${Math.floor(z / TRAFFIC_CELL_SIZE)}`;
+  }
+
+  function rebuildTrafficBuckets() {
+    trafficBuckets.clear();
+    for (const v of active) {
+      const key = bucketKey(v.group.position.x, v.group.position.z);
+      let bucket = trafficBuckets.get(key);
+      if (!bucket) {
+        bucket = [];
+        trafficBuckets.set(key, bucket);
+      }
+      bucket.push(v);
+    }
+  }
+
+  function nearbyVehicles(x, z, radius) {
+    const nearby = [];
+    const minX = Math.floor((x - radius) / TRAFFIC_CELL_SIZE);
+    const maxX = Math.floor((x + radius) / TRAFFIC_CELL_SIZE);
+    const minZ = Math.floor((z - radius) / TRAFFIC_CELL_SIZE);
+    const maxZ = Math.floor((z + radius) / TRAFFIC_CELL_SIZE);
+    for (let cellX = minX; cellX <= maxX; cellX++) {
+      for (let cellZ = minZ; cellZ <= maxZ; cellZ++) {
+        const bucket = trafficBuckets.get(`${cellX}:${cellZ}`);
+        if (bucket) nearby.push(...bucket);
+      }
+    }
+    return nearby;
+  }
+
+  function pointNearBody(v, x, z, margin) {
+    const dx = x - v.group.position.x;
+    const dz = z - v.group.position.z;
+    const cosine = Math.cos(v.group.rotation.y);
+    const sine = Math.sin(v.group.rotation.y);
+    const localX = dx * cosine - dz * sine;
+    const localZ = dx * sine + dz * cosine;
+    const halfWidth = v.kind === 'car' ? CAR_WIDTH / 2 : 0.45;
+    const halfLength = v.kind === 'car' ? (v.group.userData.length || 3.8) / 2 : 0.75;
+    return Math.abs(localX) < halfWidth + margin
+      && Math.abs(localZ) < halfLength + margin;
   }
 
   /** Every path that asks a vehicle to wait must pass through this counter. */
@@ -139,7 +195,7 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     const priorityActive = v.trafficPriorityDistance > 0;
     v.trafficPriorityTime = priorityActive ? 1 : 0;
     const crossingBlocked = !priorityActive && nearJunction < 7
-      && pedestrians?.hasCrossingNear(v.group.position.x, v.group.position.z, v.kind === 'car' ? 3.2 : 2.4);
+      && pedestrians?.hasCrossingNear(v.group.position.x, v.group.position.z, v.kind === 'car' ? 5.5 : 2.8);
     let yieldRequested = Boolean(crossingBlocked);
     let yielding = yieldRequested ? requestTrafficYield(v, now) : false;
     v.yielding = yielding;
@@ -186,23 +242,30 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     // by changing edges at a junction. Roll back this frame if a pedestrian is
     // already occupying that space; the pedestrian can then finish crossing.
     graph.pointOn(v.edge, v.t, v.forward, v.lateral, tmp);
-    const clearance = v.kind === 'car' ? 2 : 1.15;
-    const proximityBlocked = !priorityActive && v.trafficPriorityDistance <= 0
-      && pedestrians?.hasAgentNear(tmp.x, tmp.y, clearance);
+    const travelX = v.forward ? v.edge.dir.x : -v.edge.dir.x;
+    const travelZ = v.forward ? v.edge.dir.y : -v.edge.dir.y;
+    const nextHeading = Math.atan2(travelX, travelZ);
+    const proximityBlocked = pedestrians?.hasAgentInVehiclePath(
+      tmp.x,
+      tmp.y,
+      nextHeading,
+      v.kind === 'car' ? (v.group.userData.length || 3.8) : 1.3,
+      v.kind === 'car' ? PEDESTRIAN_CLEARANCE : 0.3
+    );
     if (proximityBlocked) {
       // This rollback path used to set `yielding` without touching the timeout,
       // while the top-of-frame junction path reset that timeout. The result was
       // an unlimited wait. Feed both causes through the same breaker.
-      if (!yieldRequested) {
+      if (!priorityActive && !yieldRequested) {
         yieldRequested = true;
         yielding = requestTrafficYield(v, now);
       }
-      if (yielding) {
+      if (yielding || priorityActive || v.trafficPriorityDistance > 0) {
         v.edge = previous.edge;
         v.forward = previous.forward;
         v.t = previous.t;
         v.lateral = previous.lateral;
-        v.yielding = true;
+        v.yielding = yielding;
         v.speed += (0 - v.speed) * Math.min(1, dt * 9);
       }
     }
@@ -243,17 +306,19 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
      * avoidance every frame.
      */
     hasApproachingAgent(x, z, vx, vz) {
-      for (const v of active) {
+      for (const v of nearbyVehicles(x, z, 6)) {
         const dx = v.group.position.x - x;
         const dz = v.group.position.z - z;
         const distanceSq = dx * dx + dz * dz;
         if (distanceSq > 36) continue;
         const travelX = (v.forward ? v.edge.dir.x : -v.edge.dir.x) * v.speed;
         const travelZ = (v.forward ? v.edge.dir.y : -v.edge.dir.y) * v.speed;
-        // A stopped vehicle is not approaching. Without this guard, the
-        // pedestrian's own velocity makes a stationary car look like a
-        // relative-motion threat and both agents can wait forever.
-        if (travelX * travelX + travelZ * travelZ < 0.25) continue;
+        // An ordinary stopped vehicle is not approaching. A priority vehicle
+        // is the exception: it may be physically held for the one walker
+        // already retreating, and must keep new walkers on the kerb until its
+        // short right-of-way window has cleared the crossing.
+        if (travelX * travelX + travelZ * travelZ < 0.25
+          && v.trafficPriorityDistance <= 0) continue;
         const rvx = travelX - vx;
         const rvz = travelZ - vz;
         const speedSq = rvx * rvx + rvz * rvz;
@@ -267,19 +332,20 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
           : 0;
         const closestX = dx + rvx * time;
         const closestZ = dz + rvz * time;
-        const clearance = v.kind === 'car' ? 2.2 : 1.35;
-        if (closestX * closestX + closestZ * closestZ < clearance * clearance) return true;
+        const cosine = Math.cos(v.group.rotation.y);
+        const sine = Math.sin(v.group.rotation.y);
+        const localX = closestX * cosine - closestZ * sine;
+        const localZ = closestX * sine + closestZ * cosine;
+        const halfWidth = (v.kind === 'car' ? CAR_WIDTH / 2 : 0.45) + PEDESTRIAN_CLEARANCE;
+        const halfLength = (v.kind === 'car' ? (v.group.userData.length || 3.8) / 2 : 0.75)
+          + PEDESTRIAN_CLEARANCE;
+        if (Math.abs(localX) < halfWidth && Math.abs(localZ) < halfLength) return true;
       }
       return false;
     },
 
-    hasAgentNear(x, z, radius) {
-      const rr = radius * radius;
-      return active.some((v) => {
-        const dx = v.group.position.x - x;
-        const dz = v.group.position.z - z;
-        return dx * dx + dz * dz < rr;
-      });
+    hasAgentNear(x, z, margin = PEDESTRIAN_CLEARANCE) {
+      return nearbyVehicles(x, z, 3.2 + margin).some((v) => pointNearBody(v, x, z, margin));
     },
 
     /** Cars and bikes both scale with how built-up the town is. */
@@ -310,10 +376,12 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
         (v.kind === 'car' ? carPool : bikePool).push(v);
         active.splice(i, 1);
       }
+      rebuildTrafficBuckets();
     },
 
     update(dt) {
       for (const v of active) advance(v, dt);
+      rebuildTrafficBuckets();
     },
   };
 }
