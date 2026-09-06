@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE as P, mat, glow, roundedBox, box, cylinder, sphere, mesh, makeSwayMaterial, signPlane } from '../core/materials.js';
+import { createHouseModel } from './houseModels.js';
 
 /**
  * Reusable scenery pieces: trees, houses, shops, street furniture, cars.
@@ -119,6 +120,9 @@ const HOUSE_ROOFS = [P.roofBlue, P.roofGrey, P.roofRed, P.roofTeal, P.roofBrown]
 
 /** A small Japanese-suburb house: rendered walls, deep hipped or gabled roof. */
 export function makeHouse(rng) {
+  const model = createHouseModel(rng);
+  if (model) return model;
+
   const g = new THREE.Group();
   const w = rng.range(5, 7.5);
   const d = rng.range(5, 7);

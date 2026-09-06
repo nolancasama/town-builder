@@ -114,3 +114,23 @@ medium-southwest); no lot now intrudes and none overlap each other.
 
 Guard: `.ai/verify-pedestrian-flow.mjs` builds a few landmarks and fails if any
 visible walker has not travelled.
+
+## 2026-09-06 - Suburban house models replace the procedural boxes
+
+The ambient homes filling the town blocks now use Kenney's City Kit Suburban 2.0
+(CC0) instead of `makeHouse`'s procedural box-and-roof. Twenty-one shapes, each a
+single mesh, all sharing one small colour map.
+
+The pack ships three alternate colour maps, so each house is spawned with a
+randomly chosen colourway: 21 shapes become 84 distinct-looking homes for no
+extra download, which is what stops a street reading as one house stamped
+repeatedly. Only four materials exist in total, one per colourway.
+
+They cost 2.4 MB and, unlike the characters, must load *before* `buildWorld()`,
+since houses are created synchronously during world generation - so this is 2.4
+MB added to first load rather than to a background fetch. The procedural houses
+stay as the fallback.
+
+Models are scaled at spawn to the same 5-7.5 m width the procedural houses used,
+so scenery spacing, placement collision and the reserved-ground bookkeeping are
+all unchanged.
