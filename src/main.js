@@ -24,6 +24,7 @@ import { createRecorder } from './systems/recorder.js';
 import { createTourRecords } from './systems/tourRecords.js';
 import { createGuidedTour } from './systems/guidedTour.js';
 import { createProgression } from './systems/progression.js';
+import { createBuildingNames } from './systems/buildingNames.js';
 import { createUnlockReveal } from './systems/unlockReveal.js';
 import { createOpeningScene } from './systems/openingScene.js';
 import { wait } from './core/tween.js';
@@ -67,6 +68,7 @@ class Game {
     this.tourResolve = null;
     this.rng = makeRng(WORLD.seed);
     this.progression = createProgression({ rng: this.rng });
+    this.buildingNames = createBuildingNames();
     this.clock = new THREE.Clock();
     this.elapsed = 0;
     this.frameSamples = [];
@@ -92,6 +94,8 @@ class Game {
       onTourContinue: () => this.onTourContinue(),
       onTourFinish: () => this.onTourFinish(),
       onResetUnlocks: () => this.onResetUnlocks(),
+      getBuildingName: (type) => this.buildingNames.get(type),
+      onRenameBuilding: (type, text) => this.buildingNames.set(type, text),
     });
     this.hud.buildProgress(TARGET);
 
@@ -682,6 +686,15 @@ class Game {
     if (this.phase !== 'tour-summary') return;
     this.hud.hideTourSummary();
     this.hud.hideTourPrompt();
+
+    // Stage two is complete: every built place has been talked about with
+    // "We can ___ in the ___." Same reasoning as the stage-one unlock.
+    const unlocked = this.progression.completeStage('speak');
+    if (unlocked) {
+      await this.unlockReveal.show(unlocked);
+      if (this.phase !== 'tour-summary') return;
+    }
+
     await wait(0.5);
     await this.startGuidedTour();
   }
@@ -739,6 +752,15 @@ class Game {
       particles: this.particles,
       audio: this.audio,
     });
+
+    // Stage one is complete: ten places built and named out loud. Reward it
+    // here rather than making every unlock wait for all three phases - a class
+    // often only gets through phase one in a single lesson.
+    const unlocked = this.progression.completeStage('build');
+    if (unlocked && this.phase === 'finale') {
+      await this.unlockReveal.show(unlocked);
+      if (this.phase !== 'finale') return;
+    }
 
     this.hud.showFinale(true, this.built.length);
   }

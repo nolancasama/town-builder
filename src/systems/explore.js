@@ -45,7 +45,14 @@ export function createExplore({ domElement, camera, rig, hud, landmarks }) {
 
     hud.showLandmarkCard(node.userData.type);
     clearTimeout(clearTimer);
-    clearTimer = setTimeout(() => hud.showLandmarkCard(null), 6000);
+    // Do not snatch the card away while a name is being typed into it.
+    clearTimer = setTimeout(function hide() {
+      if (hud.isRenaming && hud.isRenaming()) {
+        clearTimer = setTimeout(hide, 3000);
+        return;
+      }
+      hud.showLandmarkCard(null);
+    }, 6000);
 
     const lot = node.userData.lot;
     const span = Math.max(lot.size[0], lot.size[1]);

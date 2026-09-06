@@ -70,6 +70,8 @@ export function createProgression({ rng }) {
 
   let mysteryRounds = new Set();
   let shownThisRun = new Set();
+  /** Which stages have already paid out this run - see completeStage(). */
+  const stagesAwarded = new Set();
 
   function lockedTypes() {
     return ALL_TYPES.filter((type) => !unlocked.has(type));
@@ -79,6 +81,7 @@ export function createProgression({ rng }) {
   function startRun(targetCount) {
     shownThisRun = new Set();
     mysteryRounds = new Set();
+    stagesAwarded.clear();
 
     const locked = lockedTypes();
     const firstEligible = 1 + MYSTERY_SKIP_FIRST_ROUNDS;
@@ -144,18 +147,18 @@ export function createProgression({ rng }) {
   }
 
   /**
-   * The full experience just finished: town built, spoken about, and toured.
-   * Reward one new place, preferring something this run actually teased.
-   * Returns the unlocked type id, or null if everything is already unlocked.
+   * Award `count` new places, preferring ones this run actually teased as a
+   * mystery silhouette - discovering the thing you were shown is much more
+   * satisfying than being handed something arbitrary.
    */
-  function completeRun() {
+  function awardUnlocks(count) {
     const locked = lockedTypes();
     if (!locked.length) return null;
 
     const seenThisRun = [...shownThisRun].filter((type) => locked.includes(type));
     const pool = seenThisRun.length ? seenThisRun : locked;
     const rewarded = [];
-    for (let i = 0; i < UNLOCKS_PER_COMPLETED_RUN && pool.length; i++) {
+    for (let i = 0; i < count && pool.length; i++) {
       const pick = pool.splice(Math.floor(rng() * pool.length), 1)[0];
       unlocked.add(pick);
       newly.add(pick);
@@ -164,6 +167,29 @@ export function createProgression({ rng }) {
     }
     save();
     return rewarded[0] || null;
+  }
+
+  /**
+   * Reward finishing one stage of the lesson rather than making every unlock
+   * wait for all three.
+   *
+   * Originally the only reward in the game came after the town, the speaking
+   * tour and the guided tour were all complete - which is a long way to go for
+   * a class that may only get through phase one in a lesson. Each stage now
+   * pays out once, so a child who builds ten places sees something new even if
+   * the period ends there.
+   *
+   * `stagesAwarded` is per-run, so replaying a stage in the same session cannot
+   * farm unlocks; `startRun` clears it.
+   */
+  function completeStage(stage) {
+    if (stagesAwarded.has(stage)) return null;
+    stagesAwarded.add(stage);
+    return awardUnlocks(1);
+  }
+
+  function completeRun() {
+    return awardUnlocks(UNLOCKS_PER_COMPLETED_RUN);
   }
 
   return {
@@ -175,6 +201,7 @@ export function createProgression({ rng }) {
     maybeShowMystery,
     noteChoiceShown,
     noteBuilt,
+    completeStage,
     completeRun,
 
     /**

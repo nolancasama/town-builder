@@ -138,7 +138,15 @@
 
     <!-- Landmark name card (explore mode) -->
     <div id="landmark-card" class="hidden">
-      <div id="landmark-name">STADIUM</div>
+      <div id="landmark-name-row">
+        <div id="landmark-name">STADIUM</div>
+        <button id="landmark-rename" title="Rename this place" aria-label="Rename this place">✏️</button>
+      </div>
+      <div id="landmark-realname" class="hidden">STADIUM</div>
+      <form id="landmark-name-form" class="hidden" autocomplete="off">
+        <input id="landmark-name-input" type="text" maxlength="24" aria-label="New name" />
+        <button type="submit" id="landmark-name-save">OK</button>
+      </form>
       <div id="landmark-sentence">We have a stadium in Matsubara.</div>
     </div>
 

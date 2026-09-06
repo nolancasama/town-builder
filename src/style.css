@@ -340,9 +340,39 @@ html, body {
   opacity: 0; transition: opacity 0.35s ease, transform 0.35s ease;
   pointer-events: none;
 }
-#landmark-card.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* The card only accepts input once it is actually up, hence pointer-events
+   riding on .show rather than sitting on the card permanently. */
+#landmark-card.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+#landmark-name-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 #landmark-name {
   font-size: 28px; font-weight: 800; letter-spacing: 3px; color: var(--ink);
+}
+#landmark-rename {
+  border: none; background: #e7edf2; border-radius: 50%;
+  width: 30px; height: 30px; cursor: pointer;
+  font-size: 14px; line-height: 1;
+  display: grid; place-items: center;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+#landmark-rename:hover { background: #dbe4ec; }
+#landmark-rename:active { transform: scale(0.9); }
+/* The real English word stays on show whenever a nickname replaces it - the
+   vocabulary is the lesson and must not be hidden by the renaming. */
+#landmark-realname {
+  font-size: 12px; font-weight: 700; letter-spacing: 2px;
+  color: var(--ink-soft); text-transform: uppercase; margin-top: 1px;
+}
+#landmark-name-form { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+#landmark-name-input {
+  font-family: var(--font); font-size: 17px; font-weight: 700;
+  border: 2px solid #cdd8e2; border-radius: 10px;
+  padding: 6px 10px; width: 190px; color: var(--ink);
+}
+#landmark-name-input:focus { outline: none; border-color: var(--accent); }
+#landmark-name-save {
+  font-family: var(--font); font-size: 15px; font-weight: 800;
+  border: none; border-radius: 10px; padding: 6px 14px; cursor: pointer;
+  background: var(--accent-deep); color: #fff;
 }
 #landmark-sentence { font-size: 15px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
 

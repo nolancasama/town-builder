@@ -36,6 +36,10 @@ export function createHUD(handlers = {}) {
     typeForm: $('type-form'),
     typeInput: $('type-input'),
     landmarkCard: $('landmark-card'),
+    landmarkRename: $('landmark-rename'),
+    landmarkRealName: $('landmark-realname'),
+    landmarkNameForm: $('landmark-name-form'),
+    landmarkNameInput: $('landmark-name-input'),
     landmarkName: $('landmark-name'),
     landmarkSentence: $('landmark-sentence'),
     finale: $('finale'),
@@ -176,6 +180,52 @@ export function createHUD(handlers = {}) {
       closeSettings();
     }
   });
+  /* ---------------- renaming a place ---------------- */
+
+  let cardType = null;
+  let renaming = false;
+
+  function renderLandmarkCard() {
+    const def = LANDMARKS[cardType];
+    const custom = handlers.getBuildingName ? handlers.getBuildingName(cardType) : null;
+    el.landmarkName.textContent = custom || def.displayName;
+    // When a nickname is showing, the real English word stays underneath: the
+    // vocabulary is the point of the game and must not be renamed away.
+    el.landmarkRealName.textContent = def.displayName;
+    el.landmarkRealName.classList.toggle('hidden', !custom);
+    el.landmarkSentence.textContent = LESSON.sentence(def, LESSON.city);
+  }
+
+  function openRename() {
+    if (!cardType) return;
+    renaming = true;
+    const def = LANDMARKS[cardType];
+    const custom = handlers.getBuildingName ? handlers.getBuildingName(cardType) : null;
+    el.landmarkNameInput.value = custom || def.displayName;
+    el.landmarkNameForm.classList.remove('hidden');
+    el.landmarkNameInput.focus();
+    el.landmarkNameInput.select();
+  }
+
+  function closeRename() {
+    renaming = false;
+    el.landmarkNameForm.classList.add('hidden');
+  }
+
+  el.landmarkRename.addEventListener('click', () => {
+    if (renaming) closeRename(); else openRename();
+  });
+  el.landmarkNameForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (cardType && handlers.onRenameBuilding) handlers.onRenameBuilding(cardType, el.landmarkNameInput.value);
+    closeRename();
+    renderLandmarkCard();
+  });
+  // Escape abandons the edit rather than committing whatever is half-typed.
+  el.landmarkNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeRename(); }
+  });
+
   el.btnAgain.addEventListener('click', () => handlers.onPlayAgain && handlers.onPlayAgain());
   el.btnReplay.addEventListener('click', () => handlers.onPlayAgain && handlers.onPlayAgain());
 
@@ -572,13 +622,25 @@ export function createHUD(handlers = {}) {
     showLandmarkCard(type) {
       if (!type) {
         el.landmarkCard.classList.remove('show');
+        closeRename();
+        cardType = null;
         return;
       }
-      const def = LANDMARKS[type];
-      el.landmarkName.textContent = def.displayName;
-      el.landmarkSentence.textContent = LESSON.sentence(def, LESSON.city);
+      cardType = type;
+      closeRename();
+      renderLandmarkCard();
       el.landmarkCard.classList.remove('hidden');
       el.landmarkCard.classList.add('show');
+    },
+
+    /** True while the child is typing a new name - the caller must not auto-hide. */
+    isRenaming() {
+      return renaming;
+    },
+
+    /** Re-read the current name, e.g. after it is cleared elsewhere. */
+    refreshLandmarkCard() {
+      if (cardType) renderLandmarkCard();
     },
   };
 
