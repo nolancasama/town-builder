@@ -58,6 +58,7 @@ export function createHUD(handlers = {}) {
     tourHeard: $('tour-heard'),
     tourCounter: $('tour-counter'),
     tourTitle: $('tour-title'),
+    tourExit: $('tour-exit'),
     tourCount: $('tour-count'),
     tourSummary: $('tour-summary'),
     summaryTitle: $('summary-title'),
@@ -118,6 +119,7 @@ export function createHUD(handlers = {}) {
   el.btnFinish.addEventListener('click', () => handlers.onTourFinish && handlers.onTourFinish());
   el.btnEndExplore.addEventListener('click', () => handlers.onExplore && handlers.onExplore());
   el.btnEndAgain.addEventListener('click', () => handlers.onPlayAgain && handlers.onPlayAgain());
+  el.tourExit.addEventListener('click', () => handlers.onTourExit && handlers.onTourExit());
   function closeSettings() {
     el.settingsPanel.classList.add('hidden');
     el.btnResetUnlocks.classList.remove('armed');
@@ -487,10 +489,12 @@ export function createHUD(handlers = {}) {
       document.getElementById('progress-panel').classList.toggle('hidden', on);
       el.tourCounter.classList.toggle('hidden', !on);
       el.tourTitle.classList.toggle('hidden', !on);
+      el.tourExit.classList.toggle('hidden', !on);
       if (!on) {
         el.subtitle.classList.add('hidden');
         el.tourCounter.classList.add('hidden');
         el.tourTitle.classList.add('hidden');
+        el.tourExit.classList.add('hidden');
       }
     },
 

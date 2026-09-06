@@ -152,19 +152,12 @@ function addGuideAccessories(character, { mouth = false } = {}) {
     attachWorldSized(character, head, cap, new THREE.Vector3(0, 0.65, 0));
     character.userData.cap = cap;
 
-    if (mouth) {
-      // Sized against this model's head rather than the procedural sphere: the
-      // portrait is a close-up, so anything wider reads as a bandana across the
-      // whole lower face rather than a mouth.
-      const mouthMesh = mesh(box(0.1, 0.028, 0.01), mat(0x5a3129), {
-        cast: false, receive: false,
-      });
-      mouthMesh.name = 'portrait-mouth';
-      attachWorldSized(character, head, mouthMesh, new THREE.Vector3(0, 0.25, 0.3));
-      character.userData.mouth = mouthMesh;
-      character.userData.mouthBaseScale = mouthMesh.scale.clone();
-      character.userData.mouthBasePosition = mouthMesh.position.clone();
-    }
+    // No mouth is attached any more, in the portrait or anywhere else. The
+    // blocky characters have a printed face, and a separate box stretching on
+    // top of it read as a dark smear across the chin rather than speech. The
+    // guide still animates to the recorded audio through head and body motion,
+    // which is what actually sells the talking at this size.
+    void mouth;
   }
 
   if (armLeft) {

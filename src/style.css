@@ -549,6 +549,27 @@ html, body {
   pointer-events: none;
 }
 
+/* Way out of the guided tour. Top-right, opposite the counter, so it never sits
+   under the subtitle the child is reading. */
+#tour-exit {
+  position: absolute; top: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--paper); border: none; border-radius: 18px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow);
+  font-family: var(--font);
+  font-size: 17px; font-weight: 800; color: var(--ink);
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.15s ease, background 0.25s ease;
+  z-index: 40;
+}
+#tour-exit small {
+  font-size: 10px; font-weight: 700; color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+#tour-exit:hover { background: #f3f6f9; }
+#tour-exit:active { transform: scale(0.94); }
+
 #tour-counter {
   position: absolute; top: 16px; left: 16px;
   background: var(--paper); border-radius: 18px; padding: 9px 15px;

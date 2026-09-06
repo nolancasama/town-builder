@@ -88,6 +88,7 @@ class Game {
       onStartTour: () => this.startSpeakingTour(),
       onTourMic: () => this.onTourMicPressed(),
       onTourSkip: () => this.onTourSkip(),
+      onTourExit: () => this.exitGuidedTour(),
       onTourContinue: () => this.onTourContinue(),
       onTourFinish: () => this.onTourFinish(),
       onResetUnlocks: () => this.onResetUnlocks(),
@@ -184,6 +185,7 @@ class Game {
       rng: makeRng(WORLD.seed ^ 0x4f50454e),
       lot: openingLot,
       pedestrians: this.pedestrians,
+      audio: this.audio,
       skip: params.get('skipIntro') === '1',
     });
 
@@ -739,6 +741,26 @@ class Game {
     });
 
     this.hud.showFinale(true, this.built.length);
+  }
+
+  /**
+   * Leave the guided tour early and go straight to exploring the finished town.
+   *
+   * The tour is a several-minute cinematic; before this there was no way out of
+   * it except finishing or reloading, which is uncomfortable in a classroom on a
+   * timetable. Setting the phase before cancelling matters: `startGuidedTour` is
+   * still awaiting `run()`, and its `this.phase !== 'guided'` guards are what
+   * stop it from carrying on into the unlock reveal and the end card.
+   */
+  exitGuidedTour() {
+    if (this.phase !== 'guided') return;
+    this.phase = 'explore';
+    this.unlockReveal.cancel();
+    this.guidedTour.cancel();
+    this.guidedTour.hide();
+    this.hud.enterGuidedMode(false);
+    this.hud.hideGuidedEnd();
+    this.enterExplore();
   }
 
   enterExplore() {

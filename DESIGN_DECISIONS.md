@@ -166,6 +166,28 @@ onto themselves. `normalBias` is now derived from the actual texel size
 low-power Chromebooks fall back to. Switching wall geometry does not affect
 this; only the bias does.
 
+## 2026-09-06 - Active template landmarks get vocabulary-first silhouettes
+
+The ten landmarks that still used the shared `shopFront` or `civicBlock`
+templates were reviewed as one group. The eight active lesson words - bakery,
+cafe, restaurant, convenience store, bookstore, police station, bank and hotel -
+now have bespoke procedural forms. The retired post office and city hall remain
+on the templates, rather than spending the classroom rendering budget on places
+that cannot currently be spoken into the town.
+
+Each active landmark now carries a shape-and-prop mnemonic that survives with
+its text sign hidden: bakery loaf and bread trays; cafe corner bay, coffee cup
+and patio; restaurant deep noren entry, lanterns and kitchen flue; convenience
+store wraparound colour bands and vending machines; bookstore rooftop book
+stack and display shelf; police watch tower, vehicle bay and patrol car; bank
+portico, vault wheel and ATM; hotel tall guest-room tower and porte-cochere.
+
+These are variations of the existing four-sided toy-town kit, not a new visual
+system. Every building uses a concrete plinth and approach, finished roof edges,
+and useful rear/side windows or service details. Geometry and Lambert materials
+come from the shared caches; there are no textures, lights or new update loops.
+The police beacon keeps its existing `userData.animate` contract.
+
 ## 2026-09-06 - Typing is a teacher setting, not an in-panel escape hatch
 
 "Type it instead" used to appear as a button in the speaking panel, revealed

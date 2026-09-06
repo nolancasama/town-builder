@@ -133,87 +133,354 @@ export function civicBlock({
   return g;
 }
 
+/** Low-cost parapet/fascia treatment for flat-roof landmark silhouettes. */
+function addFlatRoofFinish(group, { w, d, y, z = 0, edge = P.cream }) {
+  group.add(mesh(box(w + 0.56, 0.18, d + 0.56), mat(edge), {
+    y: y + 0.09, z, cast: false,
+  }));
+  group.add(mesh(box(w + 0.72, 0.34, 0.22), mat(edge), {
+    y: y + 0.28, z: z + d / 2 + 0.18, cast: false,
+  }));
+  group.add(mesh(box(w + 0.72, 0.34, 0.22), mat(edge), {
+    y: y + 0.28, z: z - d / 2 - 0.18, cast: false,
+  }));
+  for (const sx of [-1, 1]) {
+    group.add(mesh(box(0.22, 0.34, d + 0.5), mat(edge), {
+      x: sx * (w / 2 + 0.18), y: y + 0.28, z, cast: false,
+    }));
+  }
+}
+
+/** A short, visible route from the lot surface to a street-facing entrance. */
+function addEntranceApproach(group, { x = 0, front, width = 1.7, depth = 1.5 }) {
+  group.add(mesh(box(width, 0.08, depth), mat(P.sidewalk), {
+    x, y: 0.045, z: front + depth / 2, cast: false,
+  }));
+  group.add(mesh(box(width + 0.2, 0.18, 0.42), mat(P.concrete), {
+    x, y: 0.09, z: front + 0.16, cast: false,
+  }));
+}
+
+function addSideWindow(group, { x, y, z = 0, w = 1.5, h = 1.2, material = mat(P.glass) }) {
+  group.add(mesh(box(0.14, h, w), material, { x, y, z, cast: false }));
+}
+
+function addFaceWindow(group, { x = 0, y, z, w = 1.5, h = 1.2, material = mat(P.glass) }) {
+  group.add(mesh(box(w, h, 0.14), material, { x, y, z, cast: false }));
+}
+
 /* --------------------------- SHOPS AND FOOD --------------------------- */
 
 export function buildBakery({ size, sign, rng }) {
-  return shopFront({
-    size, sign, rng, wall: 0xfbe9cf, accent: 0xd98b53,
-    dressing: (g, { w, front }) => {
-      // bread basket and a giant pretzel sign - the visual cue for "bakery"
-      const pretzel = new THREE.Mesh(new THREE.TorusKnotGeometry(0.55, 0.19, 48, 6, 2, 3), mat(0xc98a4b));
-      pretzel.position.set(-w * 0.32, 4.35, front + 0.35);
-      g.add(pretzel);
-      const table = mesh(box(2.2, 0.16, 1.1), mat(P.wood), { x: w * 0.05, y: 0.95, z: front + 1.3, cast: false });
-      g.add(table);
-      for (const sx of [-0.9, 0.9]) g.add(mesh(box(0.14, 0.95, 0.14), mat(P.woodDark), { x: w * 0.05 + sx, y: 0.48, z: front + 1.3, cast: false }));
-      for (let i = 0; i < 4; i++) {
-        const loaf = mesh(sphere(0.3, 7, 5), mat(rng.pick([0xd9a566, 0xc98a4b, 0xe8c894])), {
-          x: w * 0.05 - 0.8 + i * 0.55, y: 1.16, z: front + 1.3, cast: false,
-        });
-        loaf.scale.set(1.5, 0.7, 0.9);
-        g.add(loaf);
-      }
-    },
-  });
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.5);
+  const d = Math.min(size[1] - 5, 7.6);
+  const h = 4.6;
+  const front = d / 2;
+  const wallMat = mat(0xfbe9cf);
+  const roofMat = mat(0xd98b53);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  g.add(mesh(gableRoof(w + 0.9, 2.05, d + 0.8), roofMat, { y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 2.05, roofMat, type: 'gable' });
+
+  addFaceWindow(g, { x: -1.3, y: 1.55, z: front + 0.02, w: 5.6, h: 2.35, material: glassMat });
+  g.add(mesh(box(1.2, 2.35, 0.16), mat(P.woodDark), {
+    x: w * 0.36, y: 1.18, z: front + 0.04, cast: false,
+  }));
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2, z: 0, w: 1.7, h: 1.3, material: glassMat });
+  }
+  addFaceWindow(g, { x: -1.8, y: 2, z: -front - 0.02, w: 2.2, h: 1.25, material: glassMat });
+  g.add(mesh(box(1, 2.05, 0.14), mat(P.woodDark), {
+    x: 2.7, y: 1.03, z: -front - 0.03, cast: false,
+  }));
+
+  const awning = mesh(box(6.8, 0.14, 1.45), roofMat, { x: -0.7, y: 3.18, z: front + 0.65 });
+  awning.rotation.x = -0.18;
+  g.add(awning);
+  for (const sx of [-2.25, -0.75, 0.75, 2.25]) {
+    const stripe = mesh(box(0.72, 0.16, 1.46), mat(P.cream), {
+      x: sx - 0.7, y: 3.17, z: front + 0.65, cast: false,
+    });
+    stripe.rotation.x = -0.18;
+    g.add(stripe);
+  }
+  facadeSign(g, sign, { w: 4.8, h: 0.7, y: 3.9, z: front + 0.08, fg: '#8a5935' });
+
+  // A sculpted loaf remains readable when the text plane is hidden.
+  g.add(mesh(roundedBox(2.2, 0.95, 0.34, 0.25), mat(0xd9a566), {
+    x: -3.55, y: 4.85, z: front + 0.28, cast: false,
+  }));
+  for (const sx of [-0.5, 0, 0.5]) {
+    const score = mesh(box(0.12, 0.62, 0.08), mat(0xf6d6a0), {
+      x: -3.55 + sx, y: 4.85, z: front + 0.5, cast: false,
+    });
+    score.rotation.z = -0.35;
+    g.add(score);
+  }
+
+  // Window trays and rows of bread form the second unmistakable cue.
+  for (const yy of [0.85, 1.55]) {
+    g.add(mesh(box(4.5, 0.12, 0.5), mat(P.wood), {
+      x: -1.3, y: yy, z: front + 0.28, cast: false,
+    }));
+    for (let i = 0; i < 5; i++) {
+      const loaf = mesh(sphere(0.23, 7, 5), mat(rng.pick([0xd9a566, 0xc98a4b, 0xe8c894])), {
+        x: -2.9 + i * 0.8, y: yy + 0.22, z: front + 0.36, cast: false,
+      });
+      loaf.scale.set(1.4, 0.65, 0.8);
+      g.add(loaf);
+    }
+  }
+  addEntranceApproach(g, { x: w * 0.36, front, width: 1.5, depth: 1.8 });
+  return g;
 }
 
 export function buildCafe({ size, sign, rng }) {
-  return shopFront({
-    size, sign, rng, wall: 0xf3ece0, accent: 0x8a6340,
-    dressing: (g, { w, front }) => {
-      for (let i = 0; i < 2; i++) {
-        const x = -w * 0.25 + i * 3.2;
-        g.add(mesh(cylinder(0.75, 0.75, 0.14, 12), mat(0xffffff), { x, y: 0.95, z: front + 0.8, cast: false }));
-        g.add(mesh(cylinder(0.12, 0.16, 0.95, 8), mat(P.metalDark), { x, y: 0.48, z: front + 0.8, cast: false }));
-        g.add(mesh(cylinder(0.1, 0.1, 2.6, 8), mat(P.metalDark), { x, y: 1.3, z: front + 0.8, cast: false }));
-        const shade = mesh(cylinder(0.05, 1.2, 0.7, 10), mat(0xd96a5a), { x, y: 2.7, z: front + 0.8 });
-        g.add(shade);
-        for (const sx of [-1.1, 1.1]) {
-          g.add(mesh(roundedBox(0.5, 0.5, 0.5, 0.12), mat(P.wood), { x: x + sx, y: 0.5, z: front + 0.8, cast: false }));
-        }
-      }
-    },
-  });
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 5, 9);
+  const d = Math.min(size[1] - 5, 7.4);
+  const h = 4.5;
+  const bodyX = 0;
+  const front = d / 2;
+  const wallMat = mat(0xf3ece0);
+  const roofMat = mat(0x8a6340);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { x: bodyX, y: h / 2 }));
+  g.add(mesh(hipRoof(w + 0.9, 1.8, d + 0.8), roofMat, { x: bodyX, y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 1.8, roofMat, type: 'hip' });
+
+  // The projecting octagonal corner bay makes this a cafe pavilion at a glance.
+  const bayX = -w / 2 + 0.25;
+  g.add(mesh(cylinder(1.77, 1.77, 0.34, 8), mat(P.concreteDark), {
+    x: bayX, y: 0.17, z: 0.35, cast: false,
+  }));
+  g.add(mesh(cylinder(1.65, 1.65, 5.2, 8), wallMat, { x: bayX, y: 2.6, z: 0.35 }));
+  g.add(mesh(cylinder(0.18, 2.05, 1.05, 8), roofMat, { x: bayX, y: 5.65, z: 0.35 }));
+  for (const zz of [-0.65, 0.35, 1.35]) {
+    addSideWindow(g, { x: -w / 2 - 1.38, y: 2.15, z: zz, w: 0.78, h: 1.55, material: glassMat });
+  }
+  addFaceWindow(g, { x: 0.25, y: 1.75, z: front + 0.02, w: 3.4, h: 2.1, material: glassMat });
+  g.add(mesh(box(1.15, 2.25, 0.16), mat(P.woodDark), {
+    x: 3.35, y: 1.13, z: front + 0.04, cast: false,
+  }));
+  addFaceWindow(g, { x: 0.7, y: 2, z: -front - 0.02, w: 2.3, h: 1.25, material: glassMat });
+  g.add(mesh(box(0.9, 1.95, 0.14), mat(P.woodDark), {
+    x: 3.5, y: 0.98, z: -front - 0.03, cast: false,
+  }));
+  addSideWindow(g, { x: bodyX + w / 2 + 0.02, y: 2, z: 0, w: 1.8, h: 1.3, material: glassMat });
+  facadeSign(g, sign, { w: 3.7, h: 0.75, y: 3.85, z: front + 0.08, fg: '#68462f' });
+
+  // Rooftop coffee cup with three blocky steam wisps.
+  g.add(mesh(cylinder(0.72, 0.58, 0.9, 10), mat(P.cream), {
+    x: 2.45, y: 6.15, z: 0.2, cast: false,
+  }));
+  g.add(mesh(cylinder(0.78, 0.78, 0.12, 10), mat(P.woodDark), {
+    x: 2.45, y: 6.61, z: 0.2, cast: false,
+  }));
+  for (const sx of [-0.38, 0, 0.38]) {
+    const steam = mesh(cylinder(0.07, 0.07, 0.72, 6), mat(P.cream), {
+      x: 2.45 + sx, y: 7.15, z: 0.2, cast: false,
+    });
+    steam.rotation.z = sx * 0.45;
+    g.add(steam);
+  }
+
+  const tableX = 1.05;
+  const patioZ = front + 1.45;
+  g.add(mesh(cylinder(0.7, 0.7, 0.14, 10), mat(P.cream), { x: tableX, y: 0.9, z: patioZ, cast: false }));
+  g.add(mesh(cylinder(0.11, 0.15, 0.9, 8), mat(P.metalDark), { x: tableX, y: 0.45, z: patioZ, cast: false }));
+  g.add(mesh(cylinder(0.08, 0.08, 2.45, 8), mat(P.metalDark), { x: tableX, y: 1.23, z: patioZ, cast: false }));
+  g.add(mesh(cylinder(0.08, 1.15, 0.65, 10), mat(0xd96a5a), { x: tableX, y: 2.62, z: patioZ }));
+  for (const sx of [-1.05, 1.05]) {
+    g.add(mesh(roundedBox(0.5, 0.5, 0.5, 0.12), mat(P.wood), {
+      x: tableX + sx, y: 0.45, z: patioZ, cast: false,
+    }));
+  }
+  addEntranceApproach(g, { x: 3.35, front, width: 1.45, depth: 1.8 });
+  return g;
 }
 
 export function buildRestaurant({ size, sign, rng }) {
-  return shopFront({
-    size, sign, rng, wall: 0xf6e7d2, accent: 0xc0392b, storeys: 2,
-    dressing: (g, { w, front }) => {
-      // noren curtain and paper lanterns over the door
-      g.add(mesh(box(w * 0.4, 0.9, 0.1), mat(0xc0392b), { y: 2.55, z: front + 0.12, cast: false }));
-      for (const sx of [-1, 1]) {
-        const lantern = mesh(sphere(0.45, 10, 7), glow(0xffd9a0, 0.5), { x: sx * w * 0.26, y: 3.1, z: front + 0.7, cast: false });
-        lantern.scale.y = 1.25;
-        g.add(lantern);
-      }
-    },
-  });
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.4);
+  const d = Math.min(size[1] - 5, 8.2);
+  const h = 5.2;
+  const front = d / 2;
+  const wallMat = mat(0xf6e7d2);
+  const roofMat = mat(0xc0392b);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  g.add(mesh(hipRoof(w + 1, 2.15, d + 0.9), roofMat, { y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 2.15, roofMat, type: 'hip' });
+
+  // Deep central entry gives the restaurant a different massing from the shops.
+  g.add(mesh(box(4.6, 3.5, 1.1), mat(0xe7d3b7), { y: 1.75, z: front + 0.5 }));
+  g.add(mesh(box(5.2, 0.24, 1.7), roofMat, { y: 3.7, z: front + 0.7 }));
+  g.add(mesh(box(1.25, 2.45, 0.16), mat(P.woodDark), { y: 1.23, z: front + 1.08, cast: false }));
+  // Five separate noren panels read even when the facade sign is hidden.
+  for (let i = 0; i < 5; i++) {
+    g.add(mesh(box(0.72, 1.05, 0.1), roofMat, {
+      x: -1.62 + i * 0.81, y: 2.78, z: front + 1.13, cast: false,
+    }));
+  }
+  for (const sx of [-3.7, 3.7]) {
+    const lantern = mesh(sphere(0.43, 10, 7), glow(0xffd9a0, 0.5), {
+      x: sx, y: 3.25, z: front + 0.55, cast: false,
+    });
+    lantern.scale.y = 1.3;
+    g.add(lantern);
+  }
+  facadeSign(g, sign, { w: 5.3, h: 0.8, y: 4.45, z: front + 0.08, fg: '#a52f26' });
+
+  for (const sx of [-3.75, 3.75]) {
+    addFaceWindow(g, { x: sx, y: 1.8, z: front + 0.02, w: 1.65, h: 1.65, material: glassMat });
+    addFaceWindow(g, { x: sx, y: 2.25, z: -front - 0.02, w: 1.7, h: 1.3, material: glassMat });
+  }
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2.2, z: 0.5, w: 1.75, h: 1.3, material: glassMat });
+    g.add(mesh(box(0.18, 0.75, 1.15), mat(P.metal), {
+      x: sx * (w / 2 + 0.1), y: 3.85, z: -1.4, cast: false,
+    }));
+  }
+  g.add(mesh(box(1.05, 2.05, 0.14), mat(P.metalDark), {
+    y: 1.03, z: -front - 0.03, cast: false,
+  }));
+  g.add(mesh(cylinder(0.36, 0.36, 2.8, 8), mat(P.metal), {
+    x: 3.55, y: h + 1.15, z: -2.2,
+  }));
+  g.add(mesh(cylinder(0.52, 0.36, 0.4, 8), mat(P.metalDark), {
+    x: 3.55, y: h + 2.55, z: -2.2,
+  }));
+  addEntranceApproach(g, { front: front + 1.02, width: 1.7, depth: 1.1 });
+  return g;
 }
 
 export function buildConvenience({ size, sign, rng }) {
-  return shopFront({
-    size, sign, rng, wall: 0xffffff, accent: 0x2fa36b, roofSign: true,
-    dressing: (g, { w, d, front }) => {
-      g.add(mesh(box(w + 0.7, 0.5, d + 0.7), mat(0x3fa8dd), { y: 4.2, cast: false }));
-      g.add(mesh(box(3.4, 0.12, 4.4), mat(0x9aa2ab), { x: w * 0.44, y: 0.08, z: front - 1, cast: false }));
-    },
-  });
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 11.6);
+  const d = Math.min(size[1] - 5, 7.8);
+  const h = 4.35;
+  const front = d / 2;
+  const wallMat = mat(P.wallWhite);
+  const glassMat = mat(P.glass);
+  const greenMat = mat(0x2fa36b);
+  const blueMat = mat(0x3fa8dd);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  addFlatRoofFinish(g, { w, d, y: h, edge: 0x2fa36b });
+
+  // Familiar konbini colour bands wrap all four elevations.
+  for (const yy of [3.55, 3.95]) {
+    const bandMat = yy < 3.7 ? blueMat : greenMat;
+    for (const zz of [-front - 0.07, front + 0.07]) {
+      g.add(mesh(box(w + 0.12, 0.23, 0.14), bandMat, { y: yy, z: zz, cast: false }));
+    }
+    for (const sx of [-1, 1]) {
+      g.add(mesh(box(0.14, 0.23, d + 0.12), bandMat, {
+        x: sx * (w / 2 + 0.07), y: yy, cast: false,
+      }));
+    }
+  }
+
+  addFaceWindow(g, { x: -1.4, y: 1.65, z: front + 0.02, w: 6.5, h: 2.45, material: glassMat });
+  g.add(mesh(box(1.35, 2.45, 0.16), greenMat, {
+    x: 4.2, y: 1.23, z: front + 0.04, cast: false,
+  }));
+  addFaceWindow(g, { x: -2.3, y: 1.8, z: -front - 0.02, w: 2.7, h: 1.25, material: glassMat });
+  g.add(mesh(box(2.6, 2.75, 0.16), mat(P.metalDark), {
+    x: 3.2, y: 1.38, z: -front - 0.03, cast: false,
+  }));
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 1.75, z: 0.8, w: 2.4, h: 1.45, material: glassMat });
+  }
+  facadeSign(g, sign, { w: 4.4, h: 0.72, y: 3.12, z: front + 0.08, fg: '#247a57' });
+
+  // Tall rooftop marker plus paired vending machines make a 24-hour store cue.
+  g.add(mesh(box(3.4, 1.55, 0.34), wallMat, { x: -2.8, y: 5.55, z: 0.3 }));
+  g.add(mesh(box(3.1, 0.35, 0.38), blueMat, { x: -2.8, y: 5.75, z: 0.3, cast: false }));
+  g.add(mesh(box(3.1, 0.35, 0.38), greenMat, { x: -2.8, y: 5.35, z: 0.3, cast: false }));
+  for (let i = 0; i < 2; i++) {
+    const vmX = -4.7 + i * 1.15;
+    g.add(mesh(roundedBox(0.95, 1.85, 0.68, 0.08), mat(i ? P.blue : P.red), {
+      x: vmX, y: 0.93, z: front + 0.52,
+    }));
+    g.add(mesh(box(0.62, 0.92, 0.06), glow(0xfff6d8, 0.35), {
+      x: vmX, y: 1.18, z: front + 0.88, cast: false,
+    }));
+  }
+  addEntranceApproach(g, { x: 4.2, front, width: 1.6, depth: 1.75 });
+  return g;
 }
 
 export function buildBookstore({ size, sign, rng }) {
-  return shopFront({
-    size, sign, rng, wall: 0xe8dcc6, accent: 0x3f6f8f, storeys: 2,
-    dressing: (g, { w, front }) => {
-      for (let i = 0; i < 5; i++) {
-        const bk = mesh(box(0.6, 0.16, 0.9), mat(rng.pick([P.red, P.blue, P.yellow, P.green, P.purple])), {
-          x: -w * 0.2 + (i % 3) * 0.7, y: 1.5 + Math.floor(i / 3) * 0.2, z: front + 0.4, cast: false,
-        });
-        bk.rotation.z = 0.08 * i;
-        g.add(bk);
-      }
-    },
-  });
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 5, 9.2);
+  const d = Math.min(size[1] - 5, 7.5);
+  const h = 7.25;
+  const front = d / 2;
+  const wallMat = mat(0xe8dcc6);
+  const blueMat = mat(0x3f6f8f);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  addFlatRoofFinish(g, { w, d, y: h, edge: 0x3f6f8f });
+
+  addFaceWindow(g, { x: -1.15, y: 1.6, z: front + 0.02, w: 5.5, h: 2.35, material: glassMat });
+  g.add(mesh(box(1.15, 2.3, 0.16), mat(P.woodDark), {
+    x: 3.55, y: 1.15, z: front + 0.04, cast: false,
+  }));
+  for (const sx of [-2.5, 0, 2.5]) {
+    addFaceWindow(g, { x: sx, y: 5.15, z: front + 0.02, w: 1.45, h: 1.25, material: glassMat });
+    addFaceWindow(g, { x: sx, y: 4.8, z: -front - 0.02, w: 1.45, h: 1.25, material: glassMat });
+  }
+  addFaceWindow(g, { x: -1.5, y: 1.8, z: -front - 0.02, w: 2.1, h: 1.25, material: glassMat });
+  g.add(mesh(box(1, 2, 0.14), mat(P.woodDark), {
+    x: 2.7, y: 1, z: -front - 0.03, cast: false,
+  }));
+  for (const sx of [-1, 1]) {
+    for (const yy of [2, 5]) {
+      addSideWindow(g, { x: sx * (w / 2 + 0.02), y: yy, z: 0, w: 1.6, h: 1.2, material: glassMat });
+    }
+  }
+  facadeSign(g, sign, { w: 4.8, h: 0.82, y: 3.65, z: front + 0.08, fg: '#315a76' });
+
+  // Oversized stacked books replace a generic rooftop sign as the silhouette.
+  const bookColors = [P.red, P.yellow, P.blue];
+  const bookYs = [7.82, 8.28, 8.74];
+  const bookRots = [-0.12, 0.1, -0.05];
+  for (let i = 0; i < 3; i++) {
+    const book = mesh(box(4.1, 0.38, 1.65), mat(bookColors[i]), {
+      x: -0.4 + i * 0.15, y: bookYs[i], z: -0.15, cast: false,
+    });
+    book.rotation.y = bookRots[i];
+    g.add(book);
+    g.add(mesh(box(3.45, 0.2, 1.7), mat(P.cream), {
+      x: -0.4 + i * 0.15, y: bookYs[i], z: -0.15, cast: false,
+    }));
+  }
+
+  // A street-side display shelf carries bright, individually readable spines.
+  g.add(mesh(box(3.2, 1.65, 0.35), mat(P.wood), {
+    x: -2.2, y: 0.84, z: front + 0.38, cast: false,
+  }));
+  for (let i = 0; i < 7; i++) {
+    const color = rng.pick([P.red, P.blue, P.yellow, P.green, P.purple]);
+    g.add(mesh(box(0.28, 0.78, 0.16), mat(color), {
+      x: -3.25 + i * 0.36, y: 1.08, z: front + 0.58, cast: false,
+    }));
+  }
+  addEntranceApproach(g, { x: 3.55, front, width: 1.45, depth: 1.8 });
+  return g;
 }
 
 export function buildSupermarket({ size, sign, rng }) {
@@ -285,27 +552,78 @@ export function buildGasStation({ size, sign, rng }) {
 
 export function buildPoliceStation({ size, sign, rng }) {
   const [lw, ld] = size;
-  return civicBlock({
-    size, sign, rng, wall: 0xeef2f6, accent: 0x2f5f9e, storeys: 2,
-    dressing: (g, { w, front }) => {
-      // rotating blue lamp over the door and a patrol car outside
-      const lamp = mesh(cylinder(0.4, 0.4, 0.5, 10), glow(0x4aa3ff, 0.8), { y: 4.2, z: front + 1.35, cast: false });
-      g.add(lamp);
-      const patrol = makeCar(rng);
-      const patrolX = Math.min(w * 0.45 + 2.4, lw / 2 - 2.8);
-      const patrolZ = Math.min(front + 3.4, ld / 2 - 1.4);
-      patrol.position.set(patrolX, 0, patrolZ);
-      patrol.rotation.y = Math.PI / 2;
-      g.add(patrol);
-      g.add(mesh(box(0.9, 0.3, 1.6), glow(0x4aa3ff, 0.6), { x: patrolX, y: 2.3, z: patrolZ, cast: false }));
-      const prev = g.userData.animate;
-      g.userData.animate = (dt, time) => {
-        if (prev) prev(dt, time);
-        lamp.rotation.y = time * 3;
-        lamp.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(time * 3)) * 0.6;
-      };
-    },
+  const g = new THREE.Group();
+  const w = Math.min(lw - 7, 13.5);
+  const d = Math.min(ld - 8, 9);
+  const h = 5.1;
+  const bodyZ = -0.8;
+  const front = bodyZ + d / 2;
+  const wallMat = mat(0xeef2f6);
+  const blueMat = mat(0x2f5f9e);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d, { z: bodyZ });
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2, z: bodyZ }));
+  addFlatRoofFinish(g, { w, d, y: h, z: bodyZ, edge: 0x2f5f9e });
+
+  // Koban-like watch tower makes the station visible above neighbouring roofs.
+  const towerX = -w / 2 + 2.1;
+  const tower = new THREE.Group();
+  tower.position.set(towerX, 0, bodyZ - 1);
+  tower.add(mesh(box(4.2, 9, 4.5), wallMat, { y: 4.5 }));
+  tower.add(mesh(hipRoof(5, 1.8, 5.3), blueMat, { y: 9 }));
+  addPitchedRoofFinish(tower, {
+    w: 4.2, d: 4.5, y: 9, roofHeight: 1.8, roofMat: blueMat, type: 'hip',
   });
+  g.add(tower);
+  for (const zz of [-2.25, 0.25]) {
+    addSideWindow(g, { x: towerX - 2.12, y: 6.6, z: bodyZ + zz, w: 1.15, h: 1.45, material: glassMat });
+  }
+  addFaceWindow(g, { x: towerX, y: 6.7, z: front + 0.02, w: 1.6, h: 1.5, material: glassMat });
+  addFaceWindow(g, { x: towerX, y: 6.7, z: bodyZ - d / 2 - 0.02, w: 1.6, h: 1.5, material: glassMat });
+
+  // Public entrance and a single broad vehicle bay split the front elevation.
+  g.add(mesh(box(1.3, 2.5, 0.16), blueMat, {
+    x: 1.1, y: 1.25, z: front + 0.04, cast: false,
+  }));
+  g.add(mesh(box(4.15, 3.35, 0.18), mat(P.metal), {
+    x: 4.45, y: 1.68, z: front + 0.04, cast: false,
+  }));
+  for (let i = 0; i < 5; i++) {
+    g.add(mesh(box(3.85, 0.09, 0.08), blueMat, {
+      x: 4.45, y: 0.55 + i * 0.62, z: front + 0.16, cast: false,
+    }));
+  }
+  facadeSign(g, sign, { w: 4.2, h: 0.78, y: 4.35, z: front + 0.08, fg: '#28558e' });
+  for (const sx of [0.7, 4.2]) {
+    addFaceWindow(g, { x: sx, y: 2, z: bodyZ - d / 2 - 0.02, w: 1.7, h: 1.25, material: glassMat });
+  }
+  g.add(mesh(box(1, 2, 0.14), blueMat, {
+    x: -1.8, y: 1, z: bodyZ - d / 2 - 0.03, cast: false,
+  }));
+  addSideWindow(g, { x: w / 2 + 0.02, y: 2.1, z: bodyZ - 0.6, w: 1.8, h: 1.3, material: glassMat });
+
+  const lamp = mesh(cylinder(0.42, 0.42, 0.55, 10), glow(0x4aa3ff, 0.8), {
+    x: towerX, y: 11.15, z: bodyZ - 1, cast: false,
+  });
+  g.add(lamp);
+  const patrol = makeCar(rng);
+  const patrolX = Math.min(7.2, lw / 2 - 3.1);
+  const patrolZ = Math.min(front + 2.6, ld / 2 - 1.3);
+  patrol.position.set(patrolX, 0, patrolZ);
+  patrol.rotation.y = Math.PI / 2;
+  g.add(patrol);
+  g.add(mesh(box(0.9, 0.3, 1.6), glow(0x4aa3ff, 0.6), {
+    x: patrolX, y: 2.3, z: patrolZ, cast: false,
+  }));
+  addEntranceApproach(g, { x: 1.1, front, width: 1.7, depth: 2 });
+
+  // Preserve the existing animation hook consumed by construction/activity code.
+  g.userData.animate = (dt, time) => {
+    lamp.rotation.y = time * 3;
+    lamp.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(time * 3)) * 0.6;
+  };
+  return g;
 }
 
 export function buildFireStation({ size, sign, rng }) {
@@ -390,16 +708,60 @@ export function buildCityHall({ size, sign, rng }) {
 }
 
 export function buildBank({ size, sign, rng }) {
-  return civicBlock({
-    size, sign, rng, wall: 0xeae3d2, accent: 0x2c7a5b, storeys: 2,
-    dressing: (g, { front }) => {
-      // A very solid-looking vault door.
-      g.add(mesh(cylinder(1.1, 1.1, 0.5, 16), mat(P.metal), { y: 1.6, z: front + 0.16, cast: false }));
-      const dial = mesh(box(0.16, 1.5, 0.1), mat(P.metalDark), { y: 1.6, z: front + 0.42, cast: false });
-      dial.rotation.z = 0.6;
-      g.add(dial);
-    },
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 5, 10.8);
+  const d = Math.min(size[1] - 5, 8.2);
+  const h = 5.8;
+  const front = d / 2;
+  const wallMat = mat(0xeae3d2);
+  const greenMat = mat(0x2c7a5b);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  g.add(mesh(gableRoof(w + 0.9, 1.7, d + 0.8), greenMat, { y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 1.7, roofMat: greenMat, type: 'gable' });
+
+  // Chunky portico and pediment give the bank a deliberately solid profile.
+  g.add(mesh(box(7.4, 0.35, 2.2), greenMat, { y: 4.55, z: front + 0.92 }));
+  for (const sx of [-2.6, -0.85, 0.85, 2.6]) {
+    g.add(mesh(cylinder(0.28, 0.34, 4.4, 8), mat(P.cream), {
+      x: sx, y: 2.2, z: front + 1.65,
+    }));
+  }
+  g.add(mesh(box(1.35, 2.6, 0.16), greenMat, {
+    y: 1.3, z: front + 0.04, cast: false,
+  }));
+  for (const sx of [-3.55, 3.55]) {
+    addFaceWindow(g, { x: sx, y: 2.1, z: front + 0.02, w: 1.55, h: 1.45, material: glassMat });
+    addFaceWindow(g, { x: sx, y: 2.25, z: -front - 0.02, w: 1.55, h: 1.3, material: glassMat });
+  }
+  facadeSign(g, sign, { w: 4.4, h: 0.82, y: 5.05, z: front + 0.08, fg: '#28694f' });
+
+  // A rear vault wheel and side ATM make even non-front views informative.
+  const vault = mesh(cylinder(1.05, 1.05, 0.34, 16), mat(P.metal), {
+    y: 1.75, z: -front - 0.18, cast: false,
   });
+  vault.rotation.x = Math.PI / 2;
+  g.add(vault);
+  for (const rz of [0, Math.PI / 3, -Math.PI / 3]) {
+    const spoke = mesh(box(0.13, 1.55, 0.1), mat(P.metalDark), {
+      y: 1.75, z: -front - 0.39, cast: false,
+    });
+    spoke.rotation.z = rz;
+    g.add(spoke);
+  }
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 3.9, z: 0.8, w: 1.45, h: 1.15, material: glassMat });
+  }
+  g.add(mesh(roundedBox(1.15, 2, 0.65, 0.08), mat(P.metal), {
+    x: w / 2 + 0.38, y: 1, z: 1.1,
+  }));
+  g.add(mesh(box(0.08, 0.72, 0.48), glassMat, {
+    x: w / 2 + 0.99, y: 1.35, z: 1.1, cast: false,
+  }));
+  addEntranceApproach(g, { front, width: 2, depth: 2.25 });
+  return g;
 }
 
 /* ---------------------------- ATTRACTIONS ---------------------------- */
@@ -1251,26 +1613,82 @@ export function buildAirport({ size, sign, rng }) {
 }
 
 export function buildHotel({ size, sign, rng }) {
-  return civicBlock({
-    size, sign, rng, wall: 0xf6eddc, accent: 0x8a6340, storeys: 4,
-    dressing: (g, { front }) => {
-      g.add(mesh(box(8, 0.5, 3), mat(0x8a6340), { y: 4.2, z: front + 1.5 }));
-      for (const sx of [-3.4, 3.4]) {
-        g.add(mesh(cylinder(0.26, 0.26, 4.2, 8), mat(P.metal), { x: sx, y: 2.1, z: front + 2.4 }));
-      }
-      // Waiting at the kerb beside the canopy - never across the doorway.
-      const taxi = makeCar(rng);
-      taxi.position.set(5.6, 0, front + 2.7);
-      taxi.rotation.y = Math.PI / 2;
-      g.add(taxi);
-      for (const sx of [-1, 1]) {
-        g.add(mesh(box(1.6, 0.8, 1.6), mat(0xd9d3c4), { x: sx * 5.4, y: 0.4, z: front + 1, cast: false }));
-        const bush = makeBush(rng, 0.8);
-        bush.position.set(sx * 5.4, 0.8, front + 1);
-        g.add(bush);
-      }
-    },
+  const g = new THREE.Group();
+  const [lw, ld] = size;
+  const podiumW = Math.min(lw - 7, 14);
+  const podiumD = Math.min(ld - 7, 10);
+  const podiumH = 4.2;
+  const towerW = 9.2;
+  const towerD = 7.6;
+  const towerH = 14.4;
+  const bodyZ = -0.8;
+  const front = bodyZ + podiumD / 2;
+  const wallMat = mat(0xf6eddc);
+  const accentMat = mat(0x8a6340);
+  const glassMat = mat(P.glass);
+
+  addBuildingPlinth(g, podiumW, podiumD, { z: bodyZ });
+  g.add(mesh(box(podiumW, podiumH, podiumD), wallMat, { y: podiumH / 2, z: bodyZ }));
+  addFlatRoofFinish(g, { w: podiumW, d: podiumD, y: podiumH, z: bodyZ, edge: P.cream });
+  g.add(mesh(box(towerW, towerH - podiumH, towerD), wallMat, {
+    y: podiumH + (towerH - podiumH) / 2, z: bodyZ - 0.7,
+  }));
+  g.add(mesh(hipRoof(towerW + 0.9, 2.2, towerD + 0.8), accentMat, {
+    y: towerH, z: bodyZ - 0.7,
+  }));
+  addPitchedRoofFinish(g, {
+    w: towerW, d: towerD, y: towerH, roofHeight: 2.2, roofMat: accentMat, type: 'hip', z: bodyZ - 0.7,
   });
+
+  // Regular guest-room grids wrap the tall tower on all four sides.
+  for (const yy of [5.7, 8.4, 11.1, 13.5]) {
+    for (const sx of [-2.8, 0, 2.8]) {
+      addFaceWindow(g, { x: sx, y: yy, z: bodyZ + towerD / 2 - 0.68, w: 1.25, h: 1.25, material: glassMat });
+      addFaceWindow(g, { x: sx, y: yy, z: bodyZ - towerD / 2 - 0.72, w: 1.25, h: 1.25, material: glassMat });
+    }
+    for (const sx of [-1, 1]) {
+      for (const zz of [-2.35, 0, 2.35]) {
+        addSideWindow(g, { x: sx * (towerW / 2 + 0.02), y: yy, z: bodyZ - 0.7 + zz, w: 1.2, h: 1.25, material: glassMat });
+      }
+    }
+  }
+
+  g.add(mesh(box(1.5, 2.7, 0.16), accentMat, {
+    y: 1.35, z: front + 0.04, cast: false,
+  }));
+  for (const sx of [-4.7, 4.7]) {
+    addFaceWindow(g, { x: sx, y: 2, z: front + 0.02, w: 2.1, h: 1.45, material: glassMat });
+    addFaceWindow(g, { x: sx, y: 2, z: bodyZ - podiumD / 2 - 0.02, w: 2.1, h: 1.35, material: glassMat });
+  }
+  addSideWindow(g, { x: -podiumW / 2 - 0.02, y: 2, z: bodyZ, w: 2, h: 1.35, material: glassMat });
+  g.add(mesh(box(1.1, 2, 0.14), mat(P.metalDark), {
+    x: 2.8, y: 1, z: bodyZ - podiumD / 2 - 0.03, cast: false,
+  }));
+  facadeSign(g, sign, { w: 5.4, h: 0.9, y: 3.45, z: front + 0.08, fg: '#765338' });
+
+  // Porte-cochere and roof fin turn the hotel into the town's unmistakable tall landmark.
+  g.add(mesh(box(8, 0.42, 2.5), accentMat, { y: 4.05, z: front + 1.18 }));
+  for (const sx of [-3.25, 3.25]) {
+    g.add(mesh(cylinder(0.24, 0.24, 4.05, 8), mat(P.metal), {
+      x: sx, y: 2.03, z: front + 2.2,
+    }));
+  }
+  // Vertical sign blade on the front corner. This was a free-standing slab held
+  // off the wall at mid-tower height, which read as a stray brown panel rather
+  // than as part of the building; running it down the corner flush to the wall
+  // makes it the tall hotel sign it was meant to be.
+  g.add(mesh(box(0.34, 6.2, 1.5), accentMat, {
+    x: towerW / 2 + 0.15, y: 9.4, z: bodyZ - 0.7 + towerD / 2 - 1.1, cast: false,
+  }));
+
+  const taxi = makeCar(rng);
+  const taxiX = Math.min(7.2, lw / 2 - 3.1);
+  const taxiZ = Math.min(front + 2.5, ld / 2 - 1.3);
+  taxi.position.set(taxiX, 0, taxiZ);
+  taxi.rotation.y = Math.PI / 2;
+  g.add(taxi);
+  addEntranceApproach(g, { front, width: 2.1, depth: 2.1 });
+  return g;
 }
 
 /**

@@ -137,22 +137,24 @@ export function createPortrait({ rng, spec }) {
         d.updateAnimation(dt);
       }
 
-      // mouth: smoothed so it never chatters, but clearly tied to the audio
+      // Speech level is still tracked - it drives the head tilt and the gesture
+      // below - but nothing draws a mouth any more. `d.mouth` is absent on the
+      // blocky characters, so every use of it is guarded.
       d.mouthLevel = damp(d.mouthLevel, state.level, 22, dt);
       const open = Math.max(0.05, d.mouthLevel);
-      if (d.mouthBaseScale) {
-        // Gentler than the procedural rig's 7x stretch, whose base box was far
-        // smaller relative to its head.
-        d.mouth.scale.set(
-          d.mouthBaseScale.x * (1 + open * 0.22),
-          d.mouthBaseScale.y * (0.6 + open * 3),
-          d.mouthBaseScale.z
-        );
-        d.mouth.position.copy(d.mouthBasePosition);
-        d.mouth.position.y -= open * 0.018;
-      } else {
-        d.mouth.scale.set(1 + open * 0.55, 0.45 + open * 7, 1);
-        d.mouth.position.y = 0.06 - open * 0.055;
+      if (d.mouth) {
+        if (d.mouthBaseScale) {
+          d.mouth.scale.set(
+            d.mouthBaseScale.x * (1 + open * 0.22),
+            d.mouthBaseScale.y * (0.6 + open * 3),
+            d.mouthBaseScale.z
+          );
+          d.mouth.position.copy(d.mouthBasePosition);
+          d.mouth.position.y -= open * 0.018;
+        } else {
+          d.mouth.scale.set(1 + open * 0.55, 0.45 + open * 7, 1);
+          d.mouth.position.y = 0.06 - open * 0.055;
+        }
       }
 
       // breathing and a little sway - alive, not restless

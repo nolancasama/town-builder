@@ -51,6 +51,13 @@ the shared Lambert materials/geometries and add no per-frame work. The diagonal
 weave that used to cross large facades was shadow acne and is fixed in
 `createLighting` by scaling `normalBias` to the shadow map's texel size.
 
+The eight active landmarks that previously inherited the generic shop/civic
+templates now have vocabulary-first silhouettes: bakery, cafe, restaurant,
+convenience store, bookstore, police station, bank and hotel. Each is legible
+without its sign through a small set of signature forms and props, and all eight
+carry the same plinth/approach, roof-edge and four-sided-detail language as the
+ambient town. Retired post office and city hall remain generic.
+
 **NPC character assets.** Ambient pedestrians and guided-tour visitors use
 eight rigged Kenney glTF characters with per-instance skin, hair and
 clothing variation, driven by one shared Idle/Idle_Neutral/Walk/Run/Wave

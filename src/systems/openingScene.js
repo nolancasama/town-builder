@@ -17,7 +17,7 @@ import {
  * system and carries on living in the town as a permanent walker, which also
  * clears him off the buildable field he was standing on.
  */
-export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, skip = false }) {
+export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, audio = null, skip = false }) {
   const root = new THREE.Group();
   root.name = 'opening-scene';
   scene.add(root);
@@ -50,6 +50,14 @@ export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, ski
         event.stopImmediatePropagation();
         window.removeEventListener('pointerdown', finish, true);
         window.removeEventListener('keydown', finish, true);
+        // This tap is the first real user gesture of the session, so it is also
+        // the earliest point the AudioContext can legally start. Doing it here
+        // means the music is already playing by the time the town appears,
+        // instead of waiting for the first press of the microphone.
+        if (audio) {
+          audio.start();
+          audio.speechAdvance();
+        }
         resolve();
       };
       window.addEventListener('pointerdown', finish, true);
@@ -91,6 +99,7 @@ export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, ski
     attention = look || rig.camera.position;
     pointing = point;
     talking = true;
+    if (audio) audio.speechBlip();
     hud.showTourSubtitle(text, 'TOWN LOCAL', true);
     await waitForAdvance();
     talking = false;
@@ -120,6 +129,7 @@ export function createOpeningScene({ scene, rig, hud, rng, lot, pedestrians, ski
     attention = town;
     pointing = true;
     talking = true;
+    if (audio) audio.speechBlip();
     hud.showTourSubtitle('「見てみぃ！なんやこの町！」', 'TOWN LOCAL', true);
     // Advancing early acknowledges the input, but the next beat waits for the
     // push-in to finish so the camera is never stranded between viewpoints.

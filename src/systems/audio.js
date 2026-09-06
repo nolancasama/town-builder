@@ -8,14 +8,80 @@
 
 const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
 
+/* ------------------------------------------------------------------ *
+ * Background music
+ * ------------------------------------------------------------------ *
+ * Written as note data and played by a look-ahead scheduler, the way a MIDI
+ * sequencer would - no audio file, nothing to download, and it loops forever
+ * without a seam. Everything is in C major pentatonic so it can never clash
+ * with the game's existing cues, which are drawn from the same scale.
+ *
+ * The tune is deliberately unobtrusive: a teacher has this playing for a
+ * forty-minute lesson, so it stays quiet, avoids strong downbeats, and has no
+ * percussion to count along with.
+ */
+const BPM = 92;
+const BEAT = 60 / BPM;
+const STEP = BEAT / 2;            // eighth notes
+const STEPS_PER_BAR = 8;
+
+/** Semitone offsets from C, as a frequency multiplier table. */
+const semitone = (n) => Math.pow(2, n / 12);
+const C4 = 261.63;
+/** Scale degrees of the C major pentatonic, in semitones from C. */
+const SCALE = [0, 2, 4, 7, 9];
+
+/** Frequency for a scale degree, where 0 is C4 and 5 wraps to the next octave. */
+function noteAt(degree, octave = 0) {
+  const idx = ((degree % SCALE.length) + SCALE.length) % SCALE.length;
+  const oct = octave + Math.floor(degree / SCALE.length);
+  return C4 * semitone(SCALE[idx] + oct * 12);
+}
+
+/**
+ * Eight bars. `-1` is a rest. Melody sits an octave up, bass an octave down,
+ * and the pad holds one open fifth per bar. Two melody variants alternate so a
+ * long session does not turn into the same eight bars over and over.
+ */
+const MELODY_A = [
+  4, -1, 3, -1, 2, -1, 3, -1,
+  2, -1, 1, -1, 0, -1, -1, -1,
+  1, -1, 2, -1, 3, -1, 4, -1,
+  3, -1, -1, -1, 2, -1, -1, -1,
+  4, -1, 5, -1, 4, -1, 3, -1,
+  2, -1, 3, -1, 4, -1, -1, -1,
+  1, -1, 0, -1, 1, -1, 2, -1,
+  0, -1, -1, -1, -1, -1, -1, -1,
+];
+const MELODY_B = [
+  2, -1, 4, -1, 3, -1, -1, -1,
+  1, -1, 3, -1, 2, -1, -1, -1,
+  0, -1, 2, -1, 4, -1, 3, -1,
+  2, -1, -1, -1, -1, -1, -1, -1,
+  5, -1, 4, -1, 2, -1, 3, -1,
+  4, -1, -1, -1, 3, -1, 2, -1,
+  1, -1, 2, -1, 0, -1, 1, -1,
+  0, -1, -1, -1, -1, -1, -1, -1,
+];
+/** One root per bar: I - V - vi - IV shaped, in pentatonic degrees. */
+const BASS = [0, 3, 4, 2, 0, 3, 1, 2];
+
 export function createAudio() {
   let ctx = null;
   let master = null;
   let ambientGain = null;
+  let musicGain = null;
   let muted = false;
   let started = false;
   let birdTimer = null;
   let activity = 0; // 0..1, grows as the town fills up
+
+  // sequencer state
+  let musicOn = false;
+  let musicTimer = null;
+  let nextNoteTime = 0;
+  let step = 0;
+  let loopCount = 0;
 
   function ensure() {
     if (ctx) return ctx;
@@ -28,7 +94,55 @@ export function createAudio() {
     ambientGain = ctx.createGain();
     ambientGain.gain.value = 0.0;
     ambientGain.connect(master);
+    // Music has its own trim so it can sit under the effects without the
+    // effects having to be made louder. It still routes through master, so
+    // duck() and mute affect it too - which is what you want under a recording.
+    musicGain = ctx.createGain();
+    musicGain.gain.value = 0.0;
+    musicGain.connect(master);
     return ctx;
+  }
+
+  /** One music note. Softer envelope than `tone`, and on the music bus. */
+  function musicNote(freq, time, duration, { gain = 0.05, type = 'triangle' } = {}) {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, time);
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(gain, time + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+    osc.connect(g).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + duration + 0.03);
+  }
+
+  /** Schedule whatever falls in the current look-ahead window. */
+  function scheduleMusic() {
+    if (!ctx || !musicOn) return;
+    const horizon = ctx.currentTime + 0.25;
+    while (nextNoteTime < horizon) {
+      const melody = (loopCount % 2 === 0) ? MELODY_A : MELODY_B;
+      const bar = Math.floor(step / STEPS_PER_BAR);
+
+      const m = melody[step];
+      if (m >= 0) musicNote(noteAt(m, 1), nextNoteTime, STEP * 1.7, { gain: 0.043, type: 'triangle' });
+
+      // bass on the first and fifth eighth of each bar
+      const inBar = step % STEPS_PER_BAR;
+      if (inBar === 0 || inBar === 4) {
+        musicNote(noteAt(BASS[bar], -1), nextNoteTime, BEAT * 1.5, { gain: 0.055, type: 'sine' });
+      }
+      // one soft open fifth per bar, holding underneath
+      if (inBar === 0) {
+        musicNote(noteAt(BASS[bar], 0), nextNoteTime, BEAT * 3.4, { gain: 0.018, type: 'sine' });
+        musicNote(noteAt(BASS[bar] + 2, 0), nextNoteTime, BEAT * 3.4, { gain: 0.014, type: 'sine' });
+      }
+
+      nextNoteTime += STEP;
+      step++;
+      if (step >= melody.length) { step = 0; loopCount++; }
+    }
   }
 
   function tone(freq, { duration = 0.4, type = 'sine', gain = 0.18, delay = 0, glide = 0, attack = 0.01 } = {}) {
@@ -92,6 +206,39 @@ export function createAudio() {
       started = true;
       api.setActivity(activity);
       scheduleBirds();
+      api.startMusic();
+    },
+
+    /**
+     * Begin the looping background theme. Safe to call repeatedly; only the
+     * first call starts the sequencer. Needs a resumed AudioContext, so this is
+     * driven from `start()` (itself gated on a user gesture).
+     */
+    startMusic() {
+      if (musicOn || !ensure()) return;
+      musicOn = true;
+      step = 0;
+      loopCount = 0;
+      nextNoteTime = ctx.currentTime + 0.12;
+      musicGain.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 1.4);
+      // A 40ms timer against a 250ms look-ahead: the audio clock does the
+      // timing, this only has to refill the queue in good time.
+      clearInterval(musicTimer);
+      musicTimer = setInterval(scheduleMusic, 40);
+      scheduleMusic();
+    },
+
+    stopMusic() {
+      musicOn = false;
+      clearInterval(musicTimer);
+      musicTimer = null;
+      if (musicGain && ctx) musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
+    },
+
+    /** Teacher control: quieten or restore the music without touching effects. */
+    setMusicVolume(value) {
+      if (!musicGain || !ctx) return;
+      musicGain.gain.setTargetAtTime(muted ? 0 : Math.max(0, Math.min(1, value)), ctx.currentTime, 0.3);
     },
 
     get muted() {
@@ -150,6 +297,21 @@ export function createAudio() {
       [0, 0.3, 0.62].forEach((d, i) => {
         tone(PENTATONIC[i + 2], { duration: 0.7, gain: 0.11, type: 'triangle', delay: d });
       });
+    },
+
+    /**
+     * Advancing a line of the opening character's dialogue. Short and dry - it
+     * fires once per tap through a seven-beat scene, so anything with a tail
+     * would stack up and start to nag.
+     */
+    speechAdvance() {
+      tone(760, { duration: 0.075, gain: 0.075, type: 'triangle' });
+      tone(1140, { duration: 0.055, gain: 0.04, type: 'sine', delay: 0.035 });
+    },
+
+    /** The character starts a new line: a softer, lower partner to the above. */
+    speechBlip() {
+      tone(430, { duration: 0.07, gain: 0.05, type: 'sine' });
     },
 
     micOn() {
@@ -212,6 +374,8 @@ export function createAudio() {
 
     dispose() {
       clearTimeout(birdTimer);
+      clearInterval(musicTimer);
+      musicOn = false;
       if (ctx) ctx.close();
     },
   };
