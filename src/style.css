@@ -157,8 +157,14 @@ html, body {
 }
 #progress-label { font-size: 15px; font-weight: 600; color: var(--ink-soft); }
 #progress-label b { color: var(--ink); font-weight: 800; }
+/* Fixed five-wide grid: a ten-place town reads as two rows of five, which a
+   child can count at a glance. Flex-wrap gave 8 + 2, an awkward lopsided block
+   whose shape changed with the panel width. */
 #progress-icons {
-  display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; max-width: 250px;
+  display: grid;
+  grid-template-columns: repeat(5, 26px);
+  gap: 5px; margin-top: 8px;
+  justify-content: start;
 }
 .pip {
   width: 26px; height: 26px; border-radius: 8px;
@@ -227,7 +233,31 @@ html, body {
 }
 #target-sentence .key { color: var(--accent-deep); }
 
-#mic-row { margin-top: -26px; }
+/* The mic used to be pulled up over the target card, which covered the sentence
+   the child is meant to be reading. It now sits below it with real breathing
+   room, and the "choose something else" control rides beside it rather than
+   taking a row of its own further down. */
+#mic-row {
+  margin-top: 14px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+}
+/* absolute so the mic itself stays centred on the panel */
+#choice-back.round-btn {
+  position: absolute; right: calc(50% + 60px);
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 4px solid #fff;
+  background: #e7edf2;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 22px; line-height: 1;
+  transition: transform 0.18s ease, background 0.25s ease;
+  pointer-events: auto;
+}
+#choice-back.round-btn:hover { background: #dbe4ec; }
+#choice-back.round-btn:active { transform: scale(0.92); }
 #mic-btn, .mic-button {
   position: relative;
   width: 86px; height: 86px; border-radius: 50%;
@@ -355,7 +385,11 @@ html, body {
 @media (max-height: 620px) {
   #mic-btn { width: 68px; height: 68px; }
   .mic-button .mic-glyph, #mic-btn .mic-glyph { font-size: 28px; }
-  #mic-row { margin-top: -20px; }
+  #mic-row { margin-top: 9px; }
+  #choice-back.round-btn {
+    width: 44px; height: 44px; font-size: 19px;
+    right: calc(50% + 50px);
+  }
   #target-sentence { font-size: 20px; }
   #speech-panel { bottom: 10px; }
 }
@@ -501,6 +535,19 @@ html, body {
   opacity: 0; transition: opacity 0.3s ease;
 }
 #tour-heard.show { opacity: 0.95; }
+
+/* Tour banner, centred at the top so it reads as the name of the whole activity
+   rather than another status chip. */
+#tour-title {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--paper); border-radius: 18px;
+  padding: 8px 22px;
+  box-shadow: var(--shadow);
+  font-size: 17px; font-weight: 800; letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 #tour-counter {
   position: absolute; top: 16px; left: 16px;

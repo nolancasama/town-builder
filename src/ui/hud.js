@@ -57,6 +57,7 @@ export function createHUD(handlers = {}) {
     tourStatus: $('tour-status'),
     tourHeard: $('tour-heard'),
     tourCounter: $('tour-counter'),
+    tourTitle: $('tour-title'),
     tourCount: $('tour-count'),
     tourSummary: $('tour-summary'),
     summaryTitle: $('summary-title'),
@@ -382,6 +383,7 @@ export function createHUD(handlers = {}) {
       el.choicePanel.classList.add('hidden');
       document.getElementById('progress-panel').classList.toggle('hidden', on);
       el.tourCounter.classList.toggle('hidden', !on);
+      el.tourTitle.classList.toggle('hidden', !on);
       if (!on) el.tourPanel.classList.add('hidden');
     },
 
@@ -484,9 +486,11 @@ export function createHUD(handlers = {}) {
       el.tourPanel.classList.add('hidden');
       document.getElementById('progress-panel').classList.toggle('hidden', on);
       el.tourCounter.classList.toggle('hidden', !on);
+      el.tourTitle.classList.toggle('hidden', !on);
       if (!on) {
         el.subtitle.classList.add('hidden');
         el.tourCounter.classList.add('hidden');
+        el.tourTitle.classList.add('hidden');
       }
     },
 

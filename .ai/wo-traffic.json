@@ -1,0 +1,59 @@
+{
+  "task": "Stop cars and pedestrians from colliding in the 3D ESL town-builder. Cars currently drive through walkers and walkers step into moving cars; both should notice each other and avoid the collision.",
+
+  "notes": [
+    "PROJECT: Vite + three.js, no framework. A 3D town an elementary-school class builds by speaking English. Ambient traffic is scenery, not gameplay - it must look calm and sensible in the background and never draw attention by behaving oddly.",
+
+    "PARTIAL MACHINERY ALREADY EXISTS - understand it before adding anything. src/systems/vehicles.js already has a yielding concept (`v.yielding`, `requestTrafficYield`, a `crossingBlocked` test, a priority/timeout mechanism around lines 60-230) and `setPedestrians()` / `setVehicles()` wire the two pooled systems together after construction. src/systems/pedestrians.js has a matching `trafficEscapeTime` valve. Your job is to find why this is not actually preventing contact and make it work - not to bolt a second, parallel avoidance system alongside it.",
+
+    "REPRODUCE IT FIRST. Do not guess at the cause. Write a headless Playwright probe under .ai/ that runs the town for a while and records, per frame, the distance between every visible car and every visible pedestrian, reporting the closest approaches and how often a car's body actually overlaps a walker's. Use it to see what is really happening (is the yield never requested, requested too late, released too early, only checking the car's own lane, only checking walkers on the roadway and not those crossing?). Keep the probe in the repo - it is the proof the fix works.",
+
+    "GEOMETRY: cars are about 1.9m wide and 3.8-5.4m long (userData.length is set in makeCar). Walkers are roughly 0.5m across. Roads have a centre line and a width per edge class; the road graph exposes pointOn(edge, t, forward, lateral) and distanceToRoad(x, z).",
+
+    "DEADLOCK IS THE REAL RISK, not contact. A naive 'car stops for any nearby walker' rule produces a permanently frozen car at a crossing, and 'walker never steps near a car' produces a walker frozen on the kerb. The existing timeout/priority code appears to be there for exactly this reason. Whatever you do must guarantee both parties eventually proceed - and your probe should also assert that no car and no pedestrian stays stationary for longer than a few seconds.",
+
+    "There is a prior fix in this area worth reading before you touch pedestrians.js: DESIGN_DECISIONS.md, '2026-09-06 - Reserved ground is rotated, and walkers can always escape it'. Walkers stalling in front of buildings was a hard bug; do not regress it. .ai/verify-pedestrian-flow.mjs guards it - run it.",
+
+    "Record the approach you settle on in DESIGN_DECISIONS.md and update CURRENT_STATE.md."
+  ],
+
+  "requirements": [
+    "Cars do not drive through pedestrians: no car body overlaps a walker's position in a sustained run.",
+    "Pedestrians do not walk into the side of a moving car.",
+    "Neither party deadlocks: no car and no walker remains stationary for more than a few seconds because of the avoidance rule.",
+    "Crossings still work - walkers cross roads, they are not confined to the sidewalk forever.",
+    "The behaviour reads as calm background traffic: cars slow and resume smoothly rather than snapping to a stop or teleporting; walkers pause or adjust rather than jittering.",
+    "A committed Playwright probe under .ai/ measures closest car-pedestrian approach and stationary time, and passes.",
+    ".ai/verify-pedestrian-flow.mjs still passes - walkers still travel."
+  ],
+
+  "constraints": [
+    "Work only in src/systems/vehicles.js, src/systems/pedestrians.js and new files under .ai/. Do not modify the HUD, UI, index.html, style.css, buildings, scenery, world generation, the camera, or the audio system - other work is happening in those files concurrently and a conflicting edit will be thrown away.",
+    "Do not change src/config/town.js or the road graph.",
+    "Keep the per-frame cost low: this runs on Japanese elementary-school Chromebooks with integrated GPUs, with up to 48 pedestrians and 26 vehicles. An all-pairs check every frame for every agent is too expensive - budget it (spatial bucketing, checking only nearby road edges, or amortising across frames).",
+    "Do not add dependencies or 3D assets.",
+    "Do not disable or trivially neuter the systems to pass the test - for example parking all cars, removing crossings, or keeping pedestrians off the road entirely. The town must still look alive."
+  ],
+
+  "startingPoints": [
+    "src/systems/vehicles.js",
+    "src/systems/pedestrians.js",
+    ".ai/verify-pedestrian-flow.mjs",
+    "src/world/graph.js",
+    "DESIGN_DECISIONS.md"
+  ],
+
+  "validation": [
+    "npm run build",
+    "node .ai/verify-pedestrian-flow.mjs http://localhost:5199 (start the dev server with: npm run dev -- --port 5199)",
+    "the new car/pedestrian proximity probe you write under .ai/"
+  ],
+
+  "category": "simulation-systems",
+  "complexity": "hard",
+  "bounded": false,
+  "exploration": "local",
+  "risk": "medium",
+  "expectedCost": "large",
+  "executionStyle": "deep-reasoning"
+}

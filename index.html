@@ -67,7 +67,7 @@
       </div>
 
       <div id="choice-panel" class="hidden">
-        <div id="choice-title">What should we build?</div>
+        <div id="choice-title">Let's make…</div>
         <div id="choice-cards"></div>
         <div id="mystery-hint">
           Finish a town to unlock new places!
@@ -81,6 +81,9 @@
           <div id="target-sentence">We have a school in Matsubara.</div>
         </div>
         <div id="mic-row">
+          <button id="choice-back" class="round-btn" title="Choose something else" aria-label="Choose something else">
+            <span aria-hidden="true">🔄</span>
+          </button>
           <button id="mic-btn" aria-label="Press and speak">
             <span class="mic-glyph">🎙️</span>
             <span class="mic-ring"></span>
@@ -88,7 +91,6 @@
         </div>
         <div id="mic-status">Press and speak</div>
         <div id="heard"></div>
-        <button id="choice-back" class="ghost-btn">↩ Choose something else</button>
         <form id="type-form" class="hidden" autocomplete="off">
           <input id="type-input" type="text" placeholder="Type the sentence…" />
           <button type="submit">Build</button>
@@ -115,6 +117,8 @@
         <div id="tour-status">Press and speak</div>
         <div id="tour-heard"></div>
       </div>
+
+      <div id="tour-title" class="hidden">Matsubara Tour</div>
 
       <div id="tour-counter" class="hidden">
         <span id="tour-count">1 / 10</span>

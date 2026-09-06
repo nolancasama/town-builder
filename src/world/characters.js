@@ -374,8 +374,12 @@ function makeProceduralTownLocal(rng) {
 
 export function makeTownLocal(rng, options = {}) {
   if (options.procedural !== true) {
+    // The first person the child ever meets. He shouts in Osaka dialect and
+    // bosses the player into building a town, so he reads better as a pirate
+    // than as the police officer ('j') he used to be - the uniform made the
+    // opening feel like being told off rather than let in on a joke.
     const character = createCharacterModel(rng, {
-      model: 'j',
+      model: 'p',
       camera: options.camera || null,
     });
     if (character) {

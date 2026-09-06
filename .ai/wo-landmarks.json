@@ -1,0 +1,65 @@
+{
+  "task": "Give the weakest target-language landmark buildings a distinct, recognisable identity in the 3D ESL town-builder. These are the buildings the lesson names out loud ('We have a bakery in Matsubara'), so a child must be able to tell which one is which at a glance.",
+
+  "notes": [
+    "PROJECT: Vite + three.js, no framework. A 3D town an elementary-school class builds by speaking English. Art direction is 'toy town': chunky low-poly shapes, flat cheerful colours, MeshLambertMaterial under a hemisphere + directional light. Preserve that exactly - this is about charm and legibility within the style, not realism, not textures.",
+
+    "WHY THIS MATTERS PEDAGOGICALLY: the child says the building's name in English and it appears. If the bakery, the cafe and the bookstore are the same box with a different word on the sign, the vocabulary has no visual hook. Each target building should be identifiable from its shape and props even with the sign hidden.",
+
+    "WHERE THE WEAKNESS IS: src/config/landmarks.js maps each landmark type to either a bespoke `factory` or a generic `fallback`. The bespoke ones (school, hospital, library, station, and the other original hand-built landmarks in src/buildings/procedural.js) are already good - LEAVE THOSE ALONE. The weak ones are the landmarks falling through to the generic `shopFront()` and `civicBlock()` builders in src/buildings/extras.js, which produce essentially one box with an awning and a sign board. Read landmarks.js first and list which types actually use the generic builders - those are your scope.",
+
+    "PICK THE HIGH-VALUE ONES. Do not attempt every landmark. Choose roughly six to eight of the generic-built target words that a Japanese elementary class would actually practise - typical candidates are bakery, cafe, restaurant, bookstore, convenience store, post office, bank, gym, hotel - and give each a bespoke silhouette and one or two signature props. A bakery might get an awning, a bread-shaped sign and window trays; a post office a red pillar box and a service counter window; a gym a tall clerestory windowed hall. Use your judgement about which read best; say in your report which you did and which you left generic.",
+
+    "SHARED LANGUAGE ALREADY EXISTS - use it. src/world/props.js exports addBuildingPlinth() and addPitchedRoofFinish(), and the ambient houses/shops were recently given four-sided detail, ground contact and roofline articulation. New landmark work should sit in that same visual family. See DESIGN_DECISIONS.md, '2026-09-06 - Procedural buildings use a four-sided toy-town kit'.",
+
+    "PERFORMANCE IS A HARD CONSTRAINT: Japanese elementary-school Chromebooks with integrated GPUs. src/core/materials.js caches every material and geometry so the renderer can batch. Reuse mat()/box()/roundedBox()/cylinder()/sphere() from that module; no per-instance materials, no MeshStandardMaterial, no new lights, no per-frame work.",
+
+    "SIZE DISCIPLINE: each landmark is built into a lot with a fixed envelope. A building that outgrows its plot ends up standing on the public sidewalk, which was a real bug here before. .ai/audit-landmark-extents.mjs measures every landmark against its lot - run it and do not introduce a new spill. (The 'station' row reports a huge width because it includes the railway track; that is a known pre-existing artifact of the audit, not a regression - ignore that one row.)",
+
+    "Record what you changed and why in DESIGN_DECISIONS.md and update CURRENT_STATE.md."
+  ],
+
+  "requirements": [
+    "Roughly six to eight generic-built target-language landmarks each gain a distinct silhouette and signature props, so they are tellable apart without reading the sign.",
+    "Each reworked building looks finished from all four sides - the camera orbits freely.",
+    "Each sits on the ground properly (plinth/approach) and has articulated roof edges, consistent with the ambient houses and shops.",
+    "The existing bespoke landmarks (school, hospital, library, station and the other hand-built ones) are untouched.",
+    "Style unchanged: chunky low-poly toy town, flat cheerful colours, MeshLambertMaterial, shared cached materials and geometry.",
+    "The existing builder signatures and their userData contract (animate/react hooks, sign handling) still work, so the construction sequence and landmark activities are unaffected.",
+    "No landmark newly exceeds its plot in .ai/audit-landmark-extents.mjs."
+  ],
+
+  "constraints": [
+    "Work only in src/buildings/extras.js, src/buildings/procedural.js, src/config/landmarks.js and new files under .ai/. Do NOT modify src/world/props.js, src/world/scenery.js, src/core/materials.js, the HUD, index.html, style.css, the camera, the audio system, src/systems/pedestrians.js or src/systems/vehicles.js - other work is happening in those files concurrently and a conflicting edit will be thrown away.",
+    "You may READ src/world/props.js and src/core/materials.js and call their exports; just do not edit them.",
+    "Do not redesign the existing hand-built landmarks.",
+    "Do not add downloaded 3D models, image textures or new asset files.",
+    "Do not change lot positions, town layout or src/config/town.js.",
+    "Do not grow a building past its lot envelope.",
+    "Keep per-frame cost flat: no new per-frame CPU work, no new lights, no shadow-map changes."
+  ],
+
+  "startingPoints": [
+    "src/config/landmarks.js",
+    "src/buildings/extras.js",
+    "src/buildings/procedural.js",
+    ".ai/audit-landmark-extents.mjs",
+    ".ai/capture-building-survey.mjs",
+    "DESIGN_DECISIONS.md"
+  ],
+
+  "validation": [
+    "npm run build",
+    "node .ai/audit-landmark-extents.mjs http://localhost:5199 - no NEW landmark may spill past its plot (start the dev server with: npm run dev -- --port 5199)",
+    "Capture each landmark you reworked with a Playwright script under .ai/ (model .ai/capture-target.mjs, which builds one landmark and photographs it) and check the result yourself for clipping, floating parts, bad ground contact and blank faces before reporting done",
+    "Zero page errors in the capture run"
+  ],
+
+  "category": "3d-visual",
+  "complexity": "medium",
+  "bounded": true,
+  "exploration": "local",
+  "risk": "low",
+  "expectedCost": "large",
+  "executionStyle": "deep-reasoning"
+}
