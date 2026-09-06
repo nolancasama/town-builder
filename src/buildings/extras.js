@@ -4,7 +4,7 @@ import {
 } from '../core/materials.js';
 import {
   makeTree, makeBush, makeBench, makeFenceRun, makeCar, makeStreetLamp,
-  makeBicycle, gableRoof, hipRoof,
+  makeBicycle, gableRoof, hipRoof, addBuildingPlinth, addPitchedRoofFinish,
 } from '../world/props.js';
 import { windowGrid, facadeSign, steps, flagPole } from './procedural.js';
 
@@ -37,14 +37,24 @@ export function shopFront({
   const d = Math.min(ld - 4, 10);
   const h = storeys === 2 ? 7.6 : 5;
 
-  g.add(mesh(roundedBox(w, h, d, 0.18), mat(wall), { y: h / 2 }));
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), mat(wall), { y: h / 2 }));
   g.add(mesh(box(w + 0.7, 0.45, d + 0.7), mat(accent), { y: h + 0.2 }));
+  g.add(mesh(box(w + 0.42, 0.14, d + 0.42), mat(P.cream), { y: h - 0.02, cast: false }));
 
   const front = d / 2;
   g.add(mesh(box(w * 0.62, 2.4, 0.14), mat(P.glass), { y: 1.6, z: front + 0.02, cast: false }));
   g.add(mesh(box(1.2, 2.3, 0.16), mat(P.woodDark), { x: w * 0.36, y: 1.15, z: front + 0.03, cast: false }));
   if (storeys === 2) {
     windowGrid(g, { w: w - 2, h, z: front + 0.02, cols: 3, rows: 1, y0: 5.4, stepY: 3, ww: 1.4, wh: 1.3 });
+  }
+  windowGrid(g, { w: w - 2, h, z: -front - 0.02, cols: 2, rows: storeys, y0: 2.1, stepY: 3.1, ww: 1.5, wh: 1.2 });
+  for (const sx of [-1, 1]) {
+    for (let r = 0; r < storeys; r++) {
+      g.add(mesh(box(0.14, 1.2, 1.5), mat(P.glass), {
+        x: sx * (w / 2 + 0.02), y: 2.1 + r * 3.1, cast: false,
+      }));
+    }
   }
 
   if (awning) {
@@ -88,7 +98,8 @@ export function civicBlock({
   const d = Math.min(ld - 5, 12);
   const h = 3 + storeys * 3.1;
 
-  g.add(mesh(roundedBox(w, h, d, 0.2), mat(wall), { y: h / 2, z: -0.5 }));
+  addBuildingPlinth(g, w, d, { z: -0.5 });
+  g.add(mesh(box(w, h, d), mat(wall), { y: h / 2, z: -0.5 }));
   g.add(mesh(box(w + 1, 0.55, d + 1), mat(accent), { y: h + 0.28, z: -0.5 }));
   g.add(mesh(box(w + 0.4, 0.9, d + 0.4), mat(accent), { y: 0.45, z: -0.5, cast: false }));
 
@@ -1276,13 +1287,17 @@ export function buildOwnerHouse({ size, sign, rng }) {
   const roofMat = mat(rng.pick([0x5b86b5, 0xd15b4a, 0x4fa39a]));
 
   g.add(mesh(box(Math.min(size[0] - 2, w + 6), 0.16, Math.min(size[1] - 2, d + 7)), mat(0x93d762), { y: 0.08, z: 1, cast: false }));
-  g.add(mesh(roundedBox(w, h, d, 0.18), wall, { y: h / 2 }));
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wall, { y: h / 2 }));
   g.add(mesh(gableRoof(w + 1.4, 2.4, d + 1.2), roofMat, { y: h }));
+  addPitchedRoofFinish(g, { w: w + 0.5, d: d + 0.4, y: h, roofHeight: 2.4, roofMat });
   g.add(mesh(box(1.2, 2.2, 0.16), mat(P.woodDark), { y: 1.1, z: d / 2 + 0.02, cast: false }));
   g.add(mesh(box(2.6, 0.2, 1.4), roofMat, { y: 2.6, z: d / 2 + 0.6 }));
   for (const sx of [-1, 1]) {
     g.add(mesh(box(1.5, 1.3, 0.12), mat(P.glass), { x: sx * 2.6, y: 1.7, z: d / 2 + 0.02, cast: false }));
     g.add(mesh(box(1.5, 1.3, 0.12), mat(P.glass), { x: sx * 2.2, y: 4.4, z: d / 2 + 0.02, cast: false }));
+    g.add(mesh(box(1.5, 1.3, 0.12), mat(P.glass), { x: sx * 2.2, y: 4.4, z: -d / 2 - 0.02, cast: false }));
+    g.add(mesh(box(0.12, 1.3, 1.5), mat(P.glass), { x: sx * (w / 2 + 0.02), y: 3.4, cast: false }));
   }
   g.add(mesh(box(1, 2.2, 1), mat(0xb0aa9a), { x: -w * 0.3, y: h + 1.6, z: -1 }));
 

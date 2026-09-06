@@ -1,59 +1,59 @@
 {
-  "task": "Replace the Quaternius skinned NPC cast with Kenney Blocky Characters 2.0 (CC0) throughout the Osaka town-builder ESL game. The Kenney models are not skinned - they are an 8-node object hierarchy animated by node transforms - which lets the whole skinned-mesh code path, the Draco decoder and the glTF conversion pipeline be deleted, and the site payload drop from about 6.2 MB to about 2 MB.",
-
+  "task": "Visually upgrade the town's buildings in the 3D ESL town-builder so the streets read as a charming toy Japanese town rather than coloured boxes. The generic houses and shops are the priority; the hand-built landmarks get a lighter consistency pass.",
+  "notes": [
+    "PROJECT: Vite + three.js, no framework. A 3D town an elementary-school class builds by speaking English. Art direction is deliberately 'toy town': chunky low-poly shapes, flat cheerful colours, MeshLambertMaterial under a hemisphere + directional light. That direction is correct and must be preserved - this task is about adding CHARM AND DETAIL within it, not changing the style, not going realistic, not adding PBR/textures.",
+    "CURRENT SURVEY SCREENSHOTS are in qa-evidence/survey/*.png (town-overview, houses-street, houses-close, shops-street, landmark-school, landmark-bakery, landmark-hospital, landmark-library, landmark-station, landmark-park). Look at them first - they are the evidence behind every fault listed below. Regenerate them any time with: npm run dev -- --port 5199, then node .ai/capture-building-survey.mjs 5199 qa-evidence/survey",
+    "FAULT 1 - houses and shops are detailed on ONE face only. makeHouse() in src/world/props.js puts its windows and door on the +z face and nothing anywhere else, so from the other three sides every house is a blank cube. In qa-evidence/survey/houses-close.png a house fills half the frame as one featureless tan wall. The town camera orbits freely, so every facade is seen.",
+    "FAULT 2 - the wall palette collapses to beige. HOUSE_WALLS offers six colours but the town reads as an unbroken field of sand/cream (see town-overview.png); only the roofs carry colour. Houses should be individually recognisable from the air.",
+    "FAULT 3 - buildings have no ground contact. They meet the grass at a hard edge with no plinth, foundation, path to the door, step, hedge, gate or planting, so they look pasted onto the lawn rather than built on it.",
+    "FAULT 4 - roofs are bare prisms. The gable/hip roofs have no ridge cap, no fascia band and no eave overhang detail, so the roofline is a flat silhouette.",
+    "FAULT 5 - shops are a single flat storey: box + coloured band + glass strip + awning, with no door, no upper-floor windows, no vertical Japanese-style sign, and no street clutter (crates, a parked bike, planters, an A-board). The coloured roof band reads as a solid saturated plate (see the purple RAMEN roof in town-overview.png).",
+    "FAULT 6 - a faint diagonal cross-hatch striping is visible across large flat walls built from roundedBox(); it is the RoundedBoxGeometry triangulation catching the Lambert light on big panels. Visible on the tan wall in houses-close.png. Fix or avoid it on large surfaces.",
+    "THE LANDMARKS (src/buildings/procedural.js and src/buildings/extras.js) are already hand-tuned and mostly good - the school and hospital have storey bands, window grids, signage and canopies. Do NOT redesign them. Give them only a light consistency pass so they share whatever new ground-contact and roofline language the houses and shops get, and fix anything that is clearly broken or bare on a face.",
+    "PERFORMANCE IS A HARD CONSTRAINT: this runs on Japanese elementary-school Chromebooks with integrated GPUs. src/core/materials.js caches every material and geometry precisely so the renderer can batch. Reuse mat()/box()/roundedBox()/cylinder() from that module; do not create per-instance materials, do not switch to MeshStandardMaterial, and keep the added mesh count per building modest. The town builds ~45 houses plus shops at once.",
+    "Record the visual direction you settle on in DESIGN_DECISIONS.md and update CURRENT_STATE.md.",
+    "Read DESIGN_DECISIONS.md before changing the look - it carries the existing art-direction rationale, and recording this pass's decision there is part of the task.",
+    "After you have settled the visual approach, you may delegate bounded mechanical sub-work to a lower-cost worker rather than doing it yourself. Write a work order as JSON (task, requirements, constraints, startingPoints, validation, plus complexity / bounded / exploration / risk / expectedCost) and run: node ~/.claude/workers/bin/delegate.js <order.json> --controller codex --json. The router decides whether a cheaper worker is available and affordable; if it routes back to you, just do the work. Inspect the resulting diff and validation output yourself before continuing. Keep the visual judgment, the shared material/geometry design and anything coupled in your own hands. Never call another worker directly; the router is the only path down."
+  ],
   "requirements": [
-    "Source: C:/Users/nolan/Downloads/kenney_blocky-characters_20.zip, models at 'Models/GLB format/character-<letter>.glb' for letters a through r. Each .glb is ~110 KB, fully self-contained (embedded texture, one material), and needs NO conversion - copy the ones in scope into public/assets/characters/ as-is. All 18 together are only 2.04 MB.",
-    "Every model shares an identical structure: nodes 'root', 'leg-left', 'leg-right', 'torso', 'arm-left', 'arm-right', 'head' under a per-file root named 'character-<letter>', zero skins, and 27 animation clips: static, idle, walk, sprint, sit, drive, die, pick-up, emote-yes, emote-no, holding-*, attack-*, interact-*, wheelchair-*.",
-    "COMMON cast, used for pedestrians, tour tourists, the guide and the opening town local - the nine ordinary townspeople: character-a, character-b, character-e, character-f, character-i, character-j, character-k, character-m, character-q.",
-    "RARE cast, ambient street pedestrians ONLY: character-c, character-d, character-g, character-h, character-l, character-n, character-o, character-p, character-r. These are a zombie, orcs, robot knights, a ninja, a vampire and a pirate. They must be genuinely rare - roughly 1 in 12 ambient pedestrians - as an occasional surprise. They must NEVER be selected for the guide (the child's own avatar), the portrait, the opening town local, or the tour group.",
-    "Rewrite src/world/characterModels.js for non-skinned models: drop SkeletonUtils and DRACOLoader entirely, use a plain deep clone for instancing, and keep one AnimationMixer per instance targeting the cloned node hierarchy. Keep the existing public shape of the module (preload, ready check, createCharacterModel factory, playAnimation/updateAnimation on userData) so callers change as little as possible.",
-    "Map the game's motion onto the new clips: walking uses 'walk', idling uses 'idle', running uses 'sprint', and the tour's celebration uses 'emote-yes'. There is no wave or point clip.",
-    "Populate userData.head from the 'head' node, userData.arms from ['arm-left','arm-right'] and userData.legs from ['leg-left','leg-right']. These map directly onto what the original procedural pose helpers already manipulate, so poseLook (head turn), posePoint (raise an arm) and the rest should drive the nodes directly rather than needing a separate skinned branch. Simplify the isCharacterModel dispatch in src/world/characters.js wherever this makes a branch unnecessary - but a node rotated by a pose helper still has to be applied AFTER mixer.update() each frame or the clip overwrites it.",
-    "Keep the existing measure-and-scale-to-target-height behaviour so characters match the town scale and their feet sit on the ground. The raw model coordinates are in a large unit space, so measure the loaded Box3 rather than assuming units.",
-    "The guide keeps its identifying silhouette: uniform colour treatment, the cap on the 'head' node and the flag in a hand. Attach to the 'arm-left'/'arm-right' nodes rather than to wrist bones, which no longer exist. Accessories must be scaled into the node's local space and must move with the animation.",
-    "The portrait cut-in keeps its voice-driven mouth attached to the 'head' node, sized and placed for the blocky head. Note these faces are painted into the texture and already show a mouth, so place the animated mouth over that painted area and check on a screenshot that the result reads as a mouth opening rather than a second mouth appearing.",
-    "DELETE the superseded assets and pipeline: the eight Quaternius .glb files and animations.glb in public/assets/characters/, the whole public/assets/draco/ directory, scripts/build-characters.mjs, and the @gltf-transform/* and draco3dgltf devDependencies plus the build:characters npm script. Nothing may still reference them.",
-    "The Kenney models are far cheaper than 62-bone skinned meshes - 72 triangles and 8 nodes each with no skinning - so raise the ambient pedestrian cap in src/main.js from 24 toward the original 70. Target 48, keep the existing off-screen and far-distance mixer throttling, and report what you actually measured for frame time.",
-    "Keep the procedural fallback working: if the assets fail to load the game must still start with procedural people, since this runs in classrooms on unreliable wifi.",
-    "Update .ai/capture-characters.mjs: assertions currently check for skinned character models and named bones such as 'Head'. Rewrite them for the node-based models (no skins, node names as above) while keeping everything else they verify - heights, ground contact, clip playback advancing, the pedestrian cap, portrait mouth responding to voice level, no console errors, and the fallback mode, which correctly aborts asset requests to create the failure it asserts about. Do not weaken it into a test that cannot fail.",
-    "Recapture all evidence in qa-evidence/characters/ and rewrite public/assets/characters/README.md for the Kenney source and CC0 licence.",
-    "Append a DESIGN_DECISIONS.md entry: what changed, that the blocky style was chosen deliberately, the payload and performance win, and that fantasy characters appear rarely among ambient pedestrians only. Update CURRENT_STATE.md."
+    "Every generic house and shop looks finished from all four sides - windows, and where sensible a door, balcony, vent, downpipe, meter box or utility detail, on more than the front face. No blank walls at street scale.",
+    "Houses read as individually distinct in a street and from the overhead view: wall colour actually varies across the palette instead of collapsing to beige, and silhouettes vary (storeys, roof type, porch/entry, small annexe or garage).",
+    "Buildings sit convincingly on the ground: a plinth/foundation edge, and an approach - path, step, low wall, hedge or planting - between the building and the grass.",
+    "Rooflines carry detail: an eave/fascia band, a ridge cap or equivalent, so the roof is not a single untextured prism.",
+    "Shops gain depth: an actual entrance, a second storey or parapet where the height allows, a vertical or projecting sign in the Japanese shopping-street idiom, and a little street-level clutter so the shop front feels inhabited.",
+    "The diagonal shading striping on large roundedBox walls is gone.",
+    "Landmarks in src/buildings/ share the new ground-contact and roofline language without being redesigned.",
+    "Style unchanged: chunky low-poly toy town, flat cheerful colours, MeshLambertMaterial. Nothing photoreal, no imported models, no new texture assets.",
+    "makeHouse(rng) and makeShop(rng, label) keep their existing signatures and keep setting userData.footprint, which scenery placement and collision depend on."
   ],
-
   "constraints": [
-    "Do not keep any Quaternius model or the Draco decoder around 'just in case' - this is a replacement, and leaving 6 MB of dead assets in the repo defeats the point.",
-    "Do not commit the source zip or any FBX/OBJ from it. Only the .glb files actually used get committed.",
-    "The nine RARE characters must not leak into the guide, portrait, town local or tour group. A zombie must never be the child's own avatar.",
-    "Vite base is './' and the site deploys to GitHub Pages at a sub-path, so all asset paths must stay relative.",
-    "Keep the existing code style: ES modules, no TypeScript, purposeful comments only where the reason is non-obvious.",
-    "Do not modify unrelated systems (vehicles, terrain, roads, construction, progression, HUD, speech, recorder).",
-    "Do not commit, push, or alter git history."
+    "Do not reintroduce the Kenney suburban .glb houses. src/world/houseModels.js and public/assets/buildings/ were deliberately deleted this session; houses are procedural again on purpose.",
+    "Do not create per-building materials or geometries - go through the caches in src/core/materials.js.",
+    "Do not switch away from MeshLambertMaterial or add MeshStandardMaterial/PBR.",
+    "Do not add downloaded 3D models, image textures or new asset files.",
+    "Do not change town layout, lot positions, the road graph, pedestrian or vehicle systems, or src/config/town.js.",
+    "Do not grow a building's footprint beyond what makeHouse/makeShop already produce - lots and sidewalk clearance were tuned by hand and buildings must not spill onto the sidewalk.",
+    "Do not touch src/world/characterModels.js, src/world/characters.js or src/systems/pedestrians.js.",
+    "Keep the per-frame cost flat: no new per-frame CPU work, no new lights, no shadow-map changes."
   ],
-
   "startingPoints": [
-    "src/world/characterModels.js",
-    "src/world/characters.js",
-    "src/systems/pedestrians.js",
-    "src/systems/portrait.js",
-    "src/systems/openingScene.js",
-    "src/systems/activities.js",
-    "src/main.js",
-    "package.json",
-    ".ai/capture-characters.mjs"
+    "src/world/props.js",
+    "src/core/materials.js",
+    "src/world/scenery.js",
+    "src/buildings/procedural.js",
+    "src/buildings/extras.js",
+    "qa-evidence/survey/",
+    ".ai/capture-building-survey.mjs"
   ],
-
   "validation": [
     "npm run build",
-    "node .ai/capture-characters.mjs dist",
-    "node .ai/capture-characters.mjs dist fallback",
-    "Confirm no uncaught page errors and no unexpected console errors, and that no request is made for any Draco or Quaternius asset"
+    "npm run dev -- --port 5199 then node .ai/capture-building-survey.mjs 5199 qa-evidence/survey-after - capture the same ten shots after the change and compare them against qa-evidence/survey/",
+    "node .ai/audit-landmark-extents.mjs http://localhost:5199 - no landmark may newly spill past its plot",
+    "Zero page errors in the capture run (the harness prints the count)"
   ],
-
-  "notes": "This replaces a conversion that was completed and deployed yesterday, so the surrounding integration - preloading during startup, per-instance instancing, off-screen and distance mixer throttling, the landmark activity actors in activities.js, the tour's mixed cast handling, and the procedural fallback - is already written and working. Reuse it; the substance of this task is swapping the asset family and deleting the skinned-mesh and Draco machinery that the new models make unnecessary. Two hard-won details from the previous round that still apply: a pose helper's node rotation is silently discarded unless it runs after mixer.update(), and accessories parented to an animated node inherit that node's scale, so their sizes and offsets must be computed in the node's local space rather than copied from world-unit numbers. Also note glTF node names reaching three.js can be sanitized - the previous cast's 'UpperArm.L' arrived as 'UpperArmL' - so verify the actual runtime names rather than trusting the file, since these names contain hyphens.",
-
-  "category": "3d-graphics",
+  "category": "3d-visual",
   "complexity": "hard",
-  "bounded": true,
+  "bounded": false,
   "exploration": "local",
   "risk": "medium",
   "expectedCost": "large",

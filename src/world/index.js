@@ -96,8 +96,7 @@ export function createLighting(scene, renderer) {
   sun.shadow.camera.right = extent;
   sun.shadow.camera.top = extent;
   sun.shadow.camera.bottom = -extent;
-  sun.shadow.bias = -0.0006;
-  sun.shadow.normalBias = 0.035;
+  sun.shadow.bias = -0.0004;
   scene.add(sun);
   scene.add(sun.target);
 
@@ -112,6 +111,15 @@ export function createLighting(scene, renderer) {
   if (lowPower) {
     sun.shadow.mapSize.set(1024, 1024);
   }
+
+  // The shadow camera spans 208m, so one texel is ~10cm of world space (~20cm on
+  // the low-power map). A normalBias smaller than a texel lets big walls that sit
+  // near-parallel to the sun self-shadow, which showed up as a diagonal weave
+  // across every large facade. Scaling the bias to the actual texel size removes
+  // it at either resolution without visibly detaching contact shadows.
+  const texelWorldSize = (extent * 2) / sun.shadow.mapSize.x;
+  sun.shadow.normalBias = texelWorldSize * 1.4;
+
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = lowPower ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 

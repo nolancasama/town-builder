@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { PALETTE as P, mat, glow, roundedBox, box, cylinder, sphere, mesh, makeSwayMaterial, signPlane } from '../core/materials.js';
-import { createHouseModel } from './houseModels.js';
 
 /**
  * Reusable scenery pieces: trees, houses, shops, street furniture, cars.
@@ -115,43 +114,141 @@ export function makeBush(rng, scale = 1) {
 
 /* ---------------- buildings of the starting town ---------------- */
 
-const HOUSE_WALLS = [P.wallWhite, P.wallCream, P.wallSand, P.wallBlue, P.wallMint, P.wallPink];
+// One warm neutral and five clearly coloured pastels keep neighbouring homes
+// identifiable from the classroom's usual overhead camera.
+const HOUSE_WALLS = [0xfff2d9, 0xf0c58a, 0xaed5ea, 0xb9dfc8, 0xf0b9bd, 0xd2c3e8];
 const HOUSE_ROOFS = [P.roofBlue, P.roofGrey, P.roofRed, P.roofTeal, P.roofBrown];
+const SHOP_WALLS = [0xfff1d9, 0xd7e7ef, 0xd9eadb, 0xf1d2ce, 0xe2d8ef, 0xeee6d5];
+
+/** Shared, cheap ground-contact cue for both infill buildings and landmarks. */
+export function addBuildingPlinth(group, w, d, { z = 0, color = P.concreteDark } = {}) {
+  group.add(mesh(box(w + 0.24, 0.34, d + 0.24), mat(color), {
+    y: 0.17, z, cast: false,
+  }));
+}
+
+/** Thin soffit/fascia below a pitched roof, plus a readable ridge or hip cap. */
+export function addPitchedRoofFinish(group, {
+  w, d, y, roofHeight, roofMat, type = 'gable', z = 0,
+}) {
+  group.add(mesh(box(w + 0.86, 0.16, d + 0.76), mat(P.cream), {
+    y: y + 0.04, z, cast: false,
+  }));
+  if (type === 'gable') {
+    const ridge = mesh(cylinder(0.12, 0.12, d + 0.72, 6), roofMat, {
+      y: y + roofHeight + 0.02, z, cast: false,
+    });
+    ridge.rotation.x = Math.PI / 2;
+    group.add(ridge);
+  } else {
+    group.add(mesh(box(0.48, 0.16, 0.48), roofMat, {
+      y: y + roofHeight + 0.03, z, cast: false,
+    }));
+  }
+}
+
+function addFacadeWindow(group, material, x, y, z, w = 1.25, h = 1.05) {
+  group.add(mesh(box(w, h, 0.12), material, { x, y, z, cast: false }));
+}
+
+function addSideWindow(group, material, x, y, z, w = 1.2, h = 1.05) {
+  group.add(mesh(box(0.12, h, w), material, { x, y, z, cast: false }));
+}
 
 /** A small Japanese-suburb house: rendered walls, deep hipped or gabled roof. */
 export function makeHouse(rng) {
-  const model = createHouseModel(rng);
-  if (model) return model;
-
   const g = new THREE.Group();
-  const w = rng.range(5, 7.5);
-  const d = rng.range(5, 7);
+  // Discrete dimensions let the geometry cache genuinely share the new pieces.
+  const w = rng.pick([5.4, 6.2, 7]);
+  const d = rng.pick([5.2, 6, 6.8]);
   const storeys = rng.chance(0.45) ? 2 : 1;
-  const h = storeys === 2 ? rng.range(5.2, 6.2) : rng.range(3, 3.6);
+  const h = storeys === 2 ? rng.pick([5.6, 6.2]) : rng.pick([3.2, 3.6]);
   const wallMat = mat(rng.pick(HOUSE_WALLS));
   const roofMat = mat(rng.pick(HOUSE_ROOFS));
+  const winMat = mat(P.glass);
+  const doorMat = mat(rng.pick([P.wood, P.woodDark, P.navy]));
+  const roofType = rng.chance(0.55) ? 'gable' : 'hip';
+  const rh = rng.pick([1.45, 1.75, 2.05]);
 
-  g.add(mesh(roundedBox(w, h, d, 0.16), wallMat, { y: h / 2 }));
+  // Flat box faces avoid RoundedBoxGeometry's diagonal Lambert gradients on
+  // large panels. Small props remain rounded elsewhere in the town.
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
 
-  if (rng.chance(0.55)) {
-    const rh = rng.range(1.3, 1.9);
+  if (roofType === 'gable') {
     const roof = mesh(gableRoof(w + 0.9, rh, d + 0.8), roofMat, { y: h });
     g.add(roof);
   } else {
-    g.add(mesh(hipRoof(w + 0.9, rng.range(1.4, 2.1), d + 0.8), roofMat, { y: h }));
+    g.add(mesh(hipRoof(w + 0.9, rh, d + 0.8), roofMat, { y: h }));
+  }
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: rh, roofMat, type: roofType });
+
+  const doorX = -w * 0.2;
+  for (let r = 0; r < storeys; r++) {
+    const yy = 1.55 + r * 2.65;
+    if (yy > h - 0.5) continue;
+    if (r === 0) {
+      addFacadeWindow(g, winMat, w * 0.25, yy, d / 2 + 0.02, 1.45, 1.1);
+    } else {
+      for (const sx of [-1, 1]) addFacadeWindow(g, winMat, sx * w * 0.23, yy, d / 2 + 0.02);
+    }
+    for (const sx of [-1, 1]) addFacadeWindow(g, winMat, sx * w * 0.24, yy, -d / 2 - 0.02);
+    addSideWindow(g, winMat, -w / 2 - 0.02, yy, 0);
+    addSideWindow(g, winMat, w / 2 + 0.02, yy, 0);
+  }
+  g.add(mesh(box(1.05, 2.05, 0.14), doorMat, { x: doorX, y: 1.03, z: d / 2 + 0.03, cast: false }));
+
+  // An approach and one of three entry silhouettes anchor each house to its lot.
+  g.add(mesh(box(1.25, 0.08, 1.05), mat(P.sidewalk), {
+    x: doorX, y: 0.045, z: d / 2 + 0.48, cast: false,
+  }));
+  g.add(mesh(box(1.45, 0.2, 0.45), mat(P.concrete), {
+    x: doorX, y: 0.1, z: d / 2 + 0.16, cast: false,
+  }));
+  const entryType = rng.int(0, 2);
+  if (entryType === 0) {
+    const canopy = mesh(box(2.35, 0.16, 1.15), roofMat, {
+      x: doorX, y: 2.5, z: d / 2 + 0.48,
+    });
+    canopy.rotation.x = -0.12;
+    g.add(canopy);
+  } else if (entryType === 1) {
+    g.add(mesh(box(1.7, 2.35, 0.7), wallMat, {
+      x: doorX, y: 1.18, z: d / 2 + 0.34,
+    }));
+    g.add(mesh(box(1.05, 2.05, 0.12), doorMat, {
+      x: doorX, y: 1.03, z: d / 2 + 0.7, cast: false,
+    }));
+    g.add(mesh(box(2, 0.16, 0.92), roofMat, {
+      x: doorX, y: 2.42, z: d / 2 + 0.36,
+    }));
+  } else {
+    g.add(mesh(box(2.25, 0.15, 0.7), mat(P.wood), {
+      x: doorX, y: 2.45, z: d / 2 + 0.32,
+    }));
   }
 
-  const winMat = mat(P.glass);
-  const doorMat = mat(rng.pick([P.wood, P.woodDark, P.navy]));
-  for (let r = 0; r < storeys; r++) {
-    const yy = 1.5 + r * 2.6;
-    if (yy > h - 0.5) continue;
-    for (const sx of [-1, 1]) {
-      g.add(mesh(box(1.3, 1.1, 0.12), winMat, { x: sx * w * 0.24, y: yy, z: d / 2 + 0.02, cast: false }));
-    }
+  // A rear service door, meter and downpipe make the secondary elevations read
+  // as intentional without turning every small house into dozens of meshes.
+  g.add(mesh(box(0.85, 1.8, 0.12), doorMat, {
+    x: w * 0.2, y: 0.9, z: -d / 2 - 0.03, cast: false,
+  }));
+  g.add(mesh(box(0.45, 0.7, 0.18), mat(P.metal), {
+    x: w / 2 + 0.1, y: 1.15, z: d * 0.25, cast: false,
+  }));
+  g.add(mesh(cylinder(0.07, 0.07, Math.max(2.5, h - 0.4), 6), mat(P.metalDark), {
+    x: -w / 2 - 0.08, y: Math.max(2.5, h - 0.4) / 2, z: -d * 0.32, cast: false,
+  }));
+
+  if (rng.chance(0.55)) {
+    const planterX = doorX + (doorX < 0 ? 1.25 : -1.25);
+    g.add(mesh(cylinder(0.38, 0.48, 0.42, 8), mat(P.wood), {
+      x: planterX, y: 0.21, z: d / 2 + 0.58, cast: false,
+    }));
+    g.add(mesh(sphere(0.46, 7, 5), mat(P.leafDark), {
+      x: planterX, y: 0.62, z: d / 2 + 0.58, cast: false,
+    }));
   }
-  g.add(mesh(box(1.1, 2, 0.14), doorMat, { x: 0, y: 1, z: d / 2 + 0.02, cast: false }));
-  if (rng.chance(0.4)) g.add(mesh(box(2.6, 0.16, 1.2), roofMat, { y: 2.5, z: d / 2 + 0.5 }));
 
   g.userData.footprint = Math.max(w, d);
   return g;
@@ -160,25 +257,107 @@ export function makeHouse(rng) {
 /** Generic small shop / workshop with an awning and a sign board. */
 export function makeShop(rng, label = null) {
   const g = new THREE.Group();
-  const w = rng.range(7, 10);
-  const d = rng.range(6, 8);
-  const h = rng.range(4, 5.6);
-  const wallMat = mat(rng.pick([P.wallCream, P.wallWhite, P.wallSand, P.concrete]));
+  const w = rng.pick([7.5, 8.5, 9.5]);
+  const d = rng.pick([6.2, 7.2]);
+  const storeys = rng.chance(0.58) ? 2 : 1;
+  const h = storeys === 2 ? rng.pick([6.8, 7.4]) : rng.pick([4.8, 5.2]);
+  const wallMat = mat(rng.pick(SHOP_WALLS));
   const accent = rng.pick([P.red, P.blue, P.orange, P.green, P.purple, P.roofTeal]);
+  const accentMat = mat(accent);
+  const glassMat = mat(P.glass);
+  const front = d / 2;
 
-  g.add(mesh(roundedBox(w, h, d, 0.14), wallMat, { y: h / 2 }));
-  g.add(mesh(box(w + 0.5, 0.35, d + 0.5), mat(accent), { y: h + 0.15 }));
-  g.add(mesh(box(w * 0.7, 2.1, 0.12), mat(P.glass), { y: 1.5, z: d / 2 + 0.02, cast: false }));
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), wallMat, { y: h / 2 }));
+  // A quiet roof cap replaces the oversized saturated slab; colour is carried
+  // by the street-facing fascia and awning where it reads as shop identity.
+  g.add(mesh(box(w + 0.5, 0.22, d + 0.5), mat(P.roofGrey), { y: h + 0.11 }));
+  g.add(mesh(box(w * 0.72, 0.28, 0.18), accentMat, {
+    y: h - 0.02, z: front + 0.17, cast: false,
+  }));
 
-  const awning = mesh(box(w * 0.8, 0.12, 1.6), mat(accent), { y: 3.1, z: d / 2 + 0.7 });
+  const displayW = w * 0.55;
+  g.add(mesh(box(displayW, 2.1, 0.12), glassMat, {
+    x: -w * 0.12, y: 1.5, z: front + 0.02, cast: false,
+  }));
+  const doorX = w * 0.34;
+  g.add(mesh(box(1.05, 2.2, 0.14), mat(P.woodDark), {
+    x: doorX, y: 1.1, z: front + 0.03, cast: false,
+  }));
+  g.add(mesh(box(0.62, 0.82, 0.04), glassMat, {
+    x: doorX, y: 1.5, z: front + 0.11, cast: false,
+  }));
+
+  const awning = mesh(box(w * 0.68, 0.12, 1.6), accentMat, { x: -w * 0.08, y: 3.1, z: front + 0.7 });
   awning.rotation.x = -0.18;
   g.add(awning);
-  g.add(mesh(box(w * 0.6, 0.9, 0.16), mat(P.cream), { y: 3.9, z: d / 2 + 0.05, cast: false }));
+  g.add(mesh(box(w * 0.58, 0.78, 0.16), mat(P.cream), { y: storeys === 2 ? 3.95 : h - 0.75, z: front + 0.05, cast: false }));
   if (label) {
     const s = signPlane(label, w * 0.55, 0.7, { bg: 'transparent', fg: '#3d5a6c' });
-    s.position.set(0, 3.9, d / 2 + 0.16);
+    s.position.set(0, storeys === 2 ? 3.95 : h - 0.75, front + 0.16);
     g.add(s);
   }
+
+  // Upper-floor windows, or a shallow parapet for the lower shop silhouette.
+  if (storeys === 2) {
+    for (const sx of [-1, 0, 1]) addFacadeWindow(g, glassMat, sx * w * 0.23, 5.65, front + 0.02, 1.2, 1.05);
+    for (const sx of [-1, 1]) addFacadeWindow(g, glassMat, sx * w * 0.23, 5.65, -front - 0.02, 1.25, 1.05);
+    addSideWindow(g, glassMat, -w / 2 - 0.02, 5.65, 0, 1.35);
+    addSideWindow(g, glassMat, w / 2 + 0.02, 5.65, 0, 1.35);
+  } else {
+    g.add(mesh(box(w * 0.62, 0.6, 0.18), wallMat, {
+      y: h + 0.38, z: 0.15, cast: false,
+    }));
+  }
+
+  // Side display windows and a rear service elevation finish all four faces.
+  addSideWindow(g, glassMat, -w / 2 - 0.02, 1.55, 0, 1.65, 1.25);
+  addSideWindow(g, glassMat, w / 2 + 0.02, 1.55, 0, 1.65, 1.25);
+  addFacadeWindow(g, glassMat, -w * 0.2, 1.55, -front - 0.02, 1.7, 1.2);
+  g.add(mesh(box(1, 2, 0.14), mat(P.metalDark), {
+    x: w * 0.28, y: 1, z: -front - 0.03, cast: false,
+  }));
+
+  // Projecting tatekanban-inspired sign: the repeated pale inserts stay legible
+  // from oblique street views without adding another canvas texture per shop.
+  const signX = -w / 2 + 0.48;
+  g.add(mesh(box(0.22, 2.05, 0.78), accentMat, {
+    x: signX, y: Math.min(h - 1.25, 4.25), z: front + 0.4, cast: false,
+  }));
+  for (const sy of [-0.48, 0.48]) {
+    g.add(mesh(box(0.24, 0.68, 0.5), mat(P.cream), {
+      x: signX - 0.01, y: Math.min(h - 1.25, 4.25) + sy, z: front + 0.4, cast: false,
+    }));
+  }
+
+  g.add(mesh(box(1.15, 0.08, 1.15), mat(P.sidewalk), {
+    x: doorX, y: 0.045, z: front + 0.55, cast: false,
+  }));
+  g.add(mesh(box(1.35, 0.18, 0.42), mat(P.concrete), {
+    x: doorX, y: 0.09, z: front + 0.18, cast: false,
+  }));
+
+  // One small street vignette per shop keeps the mesh budget predictable.
+  if (rng.chance(0.5)) {
+    const px = -w * 0.35;
+    g.add(mesh(cylinder(0.4, 0.5, 0.48, 8), mat(P.wood), {
+      x: px, y: 0.24, z: front + 0.82, cast: false,
+    }));
+    g.add(mesh(sphere(0.5, 7, 5), mat(P.leafDark), {
+      x: px, y: 0.7, z: front + 0.82, cast: false,
+    }));
+  } else {
+    for (const i of [0, 1]) {
+      const crate = mesh(box(0.75, 0.58, 0.62), mat(P.wood), {
+        x: -w * 0.34 + i * 0.7, y: 0.29 + i * 0.12, z: front + 0.78, cast: false,
+      });
+      crate.rotation.y = i ? 0.16 : -0.12;
+      g.add(crate);
+    }
+  }
+  g.add(mesh(cylinder(0.07, 0.07, h - 0.4, 6), mat(P.metalDark), {
+    x: w / 2 + 0.08, y: (h - 0.4) / 2, z: -d * 0.32, cast: false,
+  }));
   g.userData.footprint = Math.max(w, d);
   return g;
 }

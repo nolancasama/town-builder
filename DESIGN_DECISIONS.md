@@ -134,3 +134,34 @@ stay as the fallback.
 Models are scaled at spawn to the same 5-7.5 m width the procedural houses used,
 so scenery spacing, placement collision and the reserved-ground bookkeeping are
 all unchanged.
+
+## 2026-09-06 - Procedural buildings use a four-sided toy-town kit
+
+The suburban GLB experiment was removed and the ambient streetscape is
+procedural again. Generic homes now use six distinct cheerful pastel walls,
+one- and two-storey silhouettes, gable or hip roofs, three entry treatments,
+and small planting or utility details. Shops use the same compact kit but add
+upper floors or parapets, real entrances, projecting vertical signs and one
+small pavement vignette. Every elevation carries windows or service detail so
+the freely orbiting camera no longer exposes blank boxes.
+
+Ground contact and roof edges are the shared visual grammar: a thin concrete
+plinth and short approach anchor buildings to the lawn, while pale fascia and a
+ridge or hip cap articulate pitched roofs. Existing landmarks keep their
+recognisable forms and receive only those cues plus sparse side/rear glazing.
+
+Large wall bodies use cached flat `box()` geometry. Rounded geometry remains on
+small props where it contributes to the soft toy character; flat panels are kept
+for wide walls because the rounded bevel buys nothing at that scale and costs
+vertices. Dimensions come from small discrete sets so the added details reuse
+cached geometry and material; there are no textures, imported models, PBR
+materials, lights or per-frame work.
+
+The diagonal weave that used to cross every large facade was **shadow acne, not
+geometry**. The sun's shadow camera spans 208 m, so one texel of the 2048 map is
+about 10 cm of world space, while `normalBias` was 0.035 - far under a texel, so
+walls sitting near-parallel to the sun self-shadowed and printed the texel grid
+onto themselves. `normalBias` is now derived from the actual texel size
+(`extent * 2 / mapSize.x * 1.4`), which also keeps it correct on the 1024 map
+low-power Chromebooks fall back to. Switching wall geometry does not affect
+this; only the bias does.

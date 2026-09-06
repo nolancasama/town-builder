@@ -41,6 +41,16 @@ landmarks measure inside their envelopes, and `LOT_EXCLUSIONS`,
 class/zone/occupancy checks. Live: 41 road segments, 37 houses and shops,
 9 of 9 rice-field sites placed, `WORLD` at 290 / 136 / 150.
 
+**Toy-town buildings.** Ambient houses and shops are fully procedural and read
+on all four sides. Houses vary across six pastel wall colours, one/two storeys,
+gable/hip roofs and three entry silhouettes; shops have doors, upper floors or
+parapets, projecting signs and compact pavement clutter. Shared concrete
+plinths, approaches, pale fascia and roof caps tie them to the hand-built
+landmarks. Large wall panels use cached flat box geometry; all additions retain
+the shared Lambert materials/geometries and add no per-frame work. The diagonal
+weave that used to cross large facades was shadow acne and is fixed in
+`createLighting` by scaling `normalBias` to the shadow map's texel size.
+
 **NPC character assets.** Ambient pedestrians and guided-tour visitors use
 eight rigged Kenney glTF characters with per-instance skin, hair and
 clothing variation, driven by one shared Idle/Idle_Neutral/Walk/Run/Wave

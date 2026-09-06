@@ -28,7 +28,6 @@ import { createUnlockReveal } from './systems/unlockReveal.js';
 import { createOpeningScene } from './systems/openingScene.js';
 import { wait } from './core/tween.js';
 import { preloadCharacterModels } from './world/characterModels.js';
-import { preloadHouseModels } from './world/houseModels.js';
 
 /**
  * OUR TOWN - speak English, build a town.
@@ -118,13 +117,9 @@ class Game {
 
     this.lights = createLighting(this.scene, this.renderer);
     const characterPreload = preloadCharacterModels();
-    const housePreload = preloadHouseModels();
     this.hud.setLoading(0.05);
     await this.nextFrame();
 
-    // Houses are built synchronously inside buildWorld, so their models have to
-    // be resident before it runs; characters are only needed once people spawn.
-    await housePreload;
     this.world = buildWorld(this.scene, this.rng, (p) => this.hud.setLoading(0.05 + p * 0.8));
     await this.nextFrame();
     await characterPreload;

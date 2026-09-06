@@ -2,7 +2,10 @@ import * as THREE from 'three';
 import {
   PALETTE as P, mat, glow, roundedBox, box, cylinder, sphere, mesh, signPlane,
 } from '../core/materials.js';
-import { makeTree, makeBush, makeBench, makeFenceRun, makeCar, makeStreetLamp, gableRoof, hipRoof } from '../world/props.js';
+import {
+  makeTree, makeBush, makeBench, makeFenceRun, makeCar, makeStreetLamp,
+  gableRoof, hipRoof, addBuildingPlinth, addPitchedRoofFinish,
+} from '../world/props.js';
 import { WORLD, LANDMARK_LOTS, ROAD_SEGMENTS, ROAD_WIDTH, RAILWAY } from '../config/town.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -87,12 +90,21 @@ export function buildSchool({ size, sign, rng }) {
 
   // long three-storey block set at the back of the lot
   const bz = -ld / 2 + bodyD / 2 + 2;
-  g.add(mesh(roundedBox(w, h, bodyD, 0.2), wall, { y: h / 2, z: bz }));
+  addBuildingPlinth(g, w, bodyD, { z: bz });
+  g.add(mesh(box(w, h, bodyD), wall, { y: h / 2, z: bz }));
   g.add(mesh(box(w + 0.8, 0.5, bodyD + 0.8), trim, { y: h + 0.2, z: bz }));
   for (let i = 0; i < 3; i++) {
     g.add(mesh(box(w - 0.6, 0.22, bodyD + 0.6), trim, { y: 3.05 + i * 3, z: bz, cast: false }));
   }
   windowGrid(g, { w: w - 1.5, h, z: bz + bodyD / 2 + 0.02, cols: 8, rows: 3, y0: 1.9, stepY: 3, ww: 1.7, wh: 1.5 });
+  windowGrid(g, { w: w - 1.5, h, z: bz - bodyD / 2 - 0.02, cols: 8, rows: 3, y0: 1.9, stepY: 3, ww: 1.7, wh: 1.5 });
+  for (const sx of [-1, 1]) {
+    for (let r = 0; r < 3; r++) {
+      g.add(mesh(box(0.14, 1.5, 1.7), mat(P.glass), {
+        x: sx * (w / 2 + 0.02), y: 1.9 + r * 3, z: bz, cast: false,
+      }));
+    }
+  }
 
   // entrance porch
   const porch = new THREE.Group();
@@ -161,7 +173,8 @@ export function buildLibrary({ size, sign, rng }) {
   const wall = mat(P.wallSand);
   const trim = mat(P.roofBrown);
 
-  g.add(mesh(roundedBox(w, h, d, 0.22), wall, { y: h / 2, z: -1 }));
+  addBuildingPlinth(g, w, d, { z: -1 });
+  g.add(mesh(box(w, h, d), wall, { y: h / 2, z: -1 }));
   g.add(mesh(box(w + 1.2, 0.6, d + 1.2), trim, { y: h + 0.3, z: -1 }));
   // shallow gable over the entrance bay
   const bay = mesh(roundedBox(w * 0.45, h + 1.2, 2.4, 0.2), mat(P.wallWhite), { y: (h + 1.2) / 2, z: d / 2 - 1 });
@@ -184,6 +197,13 @@ export function buildLibrary({ size, sign, rng }) {
   // entrance doors
   g.add(mesh(box(2.8, 3, 0.16), mat(P.woodDark), { y: 1.5, z: front, cast: false }));
   windowGrid(g, { w: w - 2, h, z: -1 - d / 2 - 0.02, cols: 5, rows: 2, y0: 2.4, stepY: 3.2 });
+  for (const sx of [-1, 1]) {
+    for (let r = 0; r < 2; r++) {
+      g.add(mesh(box(0.14, 1.5, 1.8), glassMat, {
+        x: sx * (w / 2 + 0.02), y: 2.4 + r * 3.2, z: -1, cast: false,
+      }));
+    }
+  }
 
   facadeSign(g, sign, { w: 5.6, h: 1, y: h + 0.6, z: front - 1.15 });
 
@@ -225,17 +245,25 @@ export function buildHospital({ size, sign, rng }) {
   const accent = mat(0x7fb2d9);
 
   // tower + lower wing
-  g.add(mesh(roundedBox(towerW, towerH, 9, 0.25), wall, { y: towerH / 2, z: -2 }));
+  addBuildingPlinth(g, towerW, 9, { z: -2 });
+  g.add(mesh(box(towerW, towerH, 9), wall, { y: towerH / 2, z: -2 }));
   g.add(mesh(box(towerW + 0.9, 0.6, 9.6), accent, { y: towerH + 0.3, z: -2 }));
-  g.add(mesh(roundedBox(lw - 4, wingH, 7, 0.2), wall, { x: 0, y: wingH / 2, z: 4 }));
+  addBuildingPlinth(g, lw - 4, 7, { z: 4 });
+  g.add(mesh(box(lw - 4, wingH, 7), wall, { x: 0, y: wingH / 2, z: 4 }));
   g.add(mesh(box(lw - 3.4, 0.5, 7.5), accent, { y: wingH + 0.25, z: 4 }));
 
   // banded windows
   for (let r = 0; r < 4; r++) {
     g.add(mesh(box(towerW - 1.4, 1.6, 0.16), mat(P.glass), { y: 3 + r * 3.2, z: -2 + 4.55, cast: false }));
     g.add(mesh(box(towerW - 1.4, 1.6, 0.16), mat(P.glass), { y: 3 + r * 3.2, z: -2 - 4.55, cast: false }));
+    for (const sx of [-1, 1]) {
+      g.add(mesh(box(0.16, 1.6, 2.2), mat(P.glass), {
+        x: sx * (towerW / 2 + 0.02), y: 3 + r * 3.2, z: -2, cast: false,
+      }));
+    }
   }
   windowGrid(g, { w: lw - 6, h: wingH, z: 7.55, cols: 5, rows: 2, y0: 2.1, stepY: 3 });
+  windowGrid(g, { w: lw - 6, h: wingH, z: 0.45, cols: 5, rows: 2, y0: 2.1, stepY: 3 });
 
   // the unmistakable red cross, on the facade and on the roof
   const crossMat = mat(P.red);
@@ -549,12 +577,20 @@ export function buildStation({ size, sign, rng, lot }) {
   const houseZ = ld / 2 - houseD / 2 - 1;
   const house = new THREE.Group();
   house.position.set(-1, 0, houseZ);
-  house.add(mesh(roundedBox(houseW, houseH, houseD, 0.2), mat(P.wallCream), { y: houseH / 2 }));
-  house.add(mesh(hipRoof(houseW + 1.4, 2, houseD + 1.2), mat(P.roofTeal), { y: houseH }));
+  const stationRoof = mat(P.roofTeal);
+  addBuildingPlinth(house, houseW, houseD);
+  house.add(mesh(box(houseW, houseH, houseD), mat(P.wallCream), { y: houseH / 2 }));
+  house.add(mesh(hipRoof(houseW + 1.4, 2, houseD + 1.2), stationRoof, { y: houseH }));
+  addPitchedRoofFinish(house, {
+    w: houseW + 0.5, d: houseD + 0.4, y: houseH, roofHeight: 2,
+    roofMat: stationRoof, type: 'hip',
+  });
   house.add(mesh(box(4.6, 3.2, 0.16), mat(P.glass), { y: 1.7, z: houseD / 2 + 0.02, cast: false }));
   for (const sx of [-1, 1]) {
     house.add(mesh(box(2, 1.6, 0.14), mat(P.glass), { x: sx * 4.4, y: 2.7, z: houseD / 2 + 0.02, cast: false }));
+    house.add(mesh(box(0.14, 1.5, 1.8), mat(P.glass), { x: sx * (houseW / 2 + 0.02), y: 2.7, cast: false }));
   }
+  house.add(mesh(box(4.5, 1.5, 0.14), mat(P.glass), { y: 2.7, z: -houseD / 2 - 0.02, cast: false }));
   const clock = mesh(cylinder(0.85, 0.85, 0.22, 14), mat(0xffffff), { y: houseH + 1.2, z: houseD / 2 - 0.6 });
   clock.rotation.x = Math.PI / 2;
   house.add(clock);
