@@ -118,7 +118,11 @@ html, body {
 .loading-town { font-size: 64px; animation: bob 1.6s ease-in-out infinite; }
 .loading-title {
   font-size: 34px; font-weight: 800; letter-spacing: 0.5px;
-  color: #3d5a6c; margin: 6px 0 18px;
+  color: #3d5a6c; margin: 6px 0 2px;
+}
+.loading-status {
+  color: var(--ink-soft); font-size: 15px; font-weight: 700;
+  margin-bottom: 18px;
 }
 .loading-bar {
   width: 220px; height: 12px; border-radius: 999px;
@@ -224,8 +228,8 @@ html, body {
   70% { transform: translateX(-4px) rotate(-0.7deg); }
 }
 #target-hint {
-  font-size: 13px; font-weight: 700; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--accent-deep); margin-bottom: 2px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent-deep); margin-bottom: 2px;
 }
 #target-sentence {
   font-size: clamp(20px, 3.6vw, 29px);
@@ -301,7 +305,8 @@ html, body {
 #mic-status {
   margin-top: 8px; font-size: 16px; font-weight: 700;
   color: #ffffff; text-shadow: 0 2px 6px rgba(20, 50, 70, 0.55);
-  min-height: 22px;
+  min-height: 22px; max-width: 100%; padding-inline: 8px;
+  text-align: center; line-height: 1.35;
 }
 #mic-status.good { color: #d8ffe6; }
 #heard {
@@ -388,6 +393,7 @@ html, body {
 #finale-inner {
   text-align: center; background: var(--paper); border-radius: var(--radius-lg);
   padding: 34px 46px; box-shadow: var(--shadow);
+  width: min(620px, calc(100vw - 32px));
   transform: scale(0.9); transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 #finale.show #finale-inner { transform: scale(1); }
@@ -408,8 +414,10 @@ html, body {
   z-index: 30; display: flex; align-items: center; gap: 14px;
   background: var(--paper); border-radius: 999px; padding: 8px 10px 8px 22px;
   box-shadow: var(--shadow); font-weight: 700; color: var(--ink-soft);
+  max-width: calc(100vw - 24px);
 }
-#explore-banner .ghost-btn { margin-top: 0; background: #e7edf2; }
+#explore-message { min-width: 0; text-align: center; }
+#explore-banner .ghost-btn { margin-top: 0; background: #e7edf2; flex: 0 0 auto; }
 
 /* ---------------- Small screens ---------------- */
 @media (max-height: 620px) {
@@ -557,6 +565,7 @@ html, body {
 #tour-status {
   margin-top: 10px; font-size: 15px; font-weight: 700;
   color: #ffffff; text-shadow: 0 2px 6px rgba(20, 50, 70, 0.55); min-height: 20px;
+  max-width: 100%; padding-inline: 8px; text-align: center; line-height: 1.35;
 }
 #tour-status.good { color: #d8ffe6; }
 #tour-heard {
@@ -582,7 +591,10 @@ html, body {
 /* Way out of the guided tour. Top-right, opposite the counter, so it never sits
    under the subtitle the child is reading. */
 #tour-exit {
-  position: absolute; top: 16px; right: 16px;
+  /* Below the mute/settings cluster, not on top of it: #top-right also sits at
+     top:16px right:16px, and this button's z-index was covering the gear for
+     the whole guided tour. */
+  position: absolute; top: 74px; right: 16px;
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   background: var(--paper); border: none; border-radius: 18px;
   padding: 8px 16px;
@@ -607,8 +619,8 @@ html, body {
 }
 #tour-count { display: block; font-size: 19px; font-weight: 800; color: var(--ink); }
 #tour-counter-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
-  text-transform: uppercase; color: var(--ink-soft);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--ink-soft);
 }
 
 /* ---------------- Tour summary ---------------- */
@@ -622,6 +634,7 @@ html, body {
 #tour-summary-inner {
   text-align: center; background: var(--paper); border-radius: var(--radius-lg);
   padding: 30px 40px; box-shadow: var(--shadow);
+  width: min(620px, calc(100vw - 32px));
   transform: scale(0.92); transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 #tour-summary.show #tour-summary-inner { transform: scale(1); }
@@ -670,8 +683,8 @@ html, body {
 #subtitle-advance {
   display: none;
   margin-top: 6px;
-  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-  text-transform: uppercase; color: rgba(255, 255, 255, 0.62);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.62);
 }
 #tour-subtitle.awaiting-input #subtitle-advance { display: block; }
 
@@ -685,6 +698,7 @@ html, body {
 #tour-end-inner {
   text-align: center; background: var(--paper); border-radius: var(--radius-lg);
   padding: 32px 46px; box-shadow: var(--shadow);
+  width: min(620px, calc(100vw - 32px));
   transform: scale(0.92); transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 #tour-end.show #tour-end-inner { transform: scale(1); }
@@ -782,7 +796,7 @@ html, body {
 .settings-row.on .settings-state { color: #fff; background: var(--accent-deep, #3d8b5f); }
 /* keep the label clear of the pill */
 #btn-toggle-typing .settings-row-label,
-#btn-toggle-typing small { padding-right: 46px; }
+#btn-toggle-typing small { padding-right: 54px; }
 
 /* ---------------- Unlock reveal ---------------- */
 #unlock-reveal {
@@ -821,8 +835,8 @@ html, body {
 }
 #unlock-titles.show { opacity: 1; transform: translateY(0); }
 #unlock-kicker {
-  font-size: 13px; font-weight: 800; letter-spacing: 2.4px;
-  text-transform: uppercase; color: var(--accent);
+  font-size: 13px; font-weight: 800; letter-spacing: 0.04em;
+  color: var(--accent);
   text-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 #unlock-name {
@@ -835,11 +849,16 @@ html, body {
   text-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 #unlock-tap-hint {
-  margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-  color: rgba(255,255,255,0.6); text-transform: uppercase;
+  margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.6);
 }
 
 @media (max-width: 480px) {
   #unlock-stage { width: 70vw; height: 82vw; }
   #settings-panel { width: 210px; }
+  #tour-counter,
+  #tour-exit { top: 64px; }
+  #finale-inner,
+  #tour-summary-inner,
+  #tour-end-inner { padding: 24px 20px; }
 }

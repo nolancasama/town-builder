@@ -1,0 +1,66 @@
+{
+  "task": "Translate the interface of this 3D ESL town-builder into Japanese: every direction and instruction to the player becomes Japanese, while the English the lesson is teaching stays in English.",
+
+  "notes": [
+    "PROJECT: Vite + three.js, no framework. A 3D town that Japanese elementary-school children build by speaking English sentences aloud. The players are ~8-12 years old; the teacher is a Japanese homeroom teacher who may not speak much English.",
+
+    "THE RULE, and it is the whole task: INSTRUCTIONS become Japanese, LABELS stay English. An instruction is anything telling the player what to do or explaining how the game works. A label is the English the game is teaching, or the name of a thing. Getting this backwards ruins the lesson, so when a string is genuinely ambiguous, leave it in English and list it in your report rather than guessing.",
+
+    "MUST BECOME JAPANESE (examples, not the complete list - find them all): 'Say:' above the target sentence; 'Press and speak'; 'Listening...'; 'Try again!' and the other speech-error messages; 'Type the sentence...'; 'Choose something else'; 'Finish a town to unlock new places!'; 'Reset building unlocks'; 'Allow typing instead of speaking'; 'Close'; 'Tap again to confirm'; 'On'/'Off'; 'Skip'; 'Leave the tour'; 'Rename this place'; 'click or space'; the loading text; the name-entry prompt; the finale and tour-summary copy and buttons ('Explore Town', 'Play Again', 'Continue', 'Finish'); button titles and aria-labels.",
+
+    "MUST STAY ENGLISH: the target sentence itself ('We have a school in Matsubara.'); the tour sentence frame ('We can ___ in the ___.'); every landmark display name and sign (SCHOOL, LIBRARY, BAKERY...); the place-category labels on the choice cards (COMMUNITY, TRANSPORT, SHOPPING, RECREATION, STAY); 'Let's make...' as the choice-panel prompt (this is deliberately modelled target language - you may add a Japanese support line under it, but the English stays and stays primary); 'Matsubara Tour'; the child's own recognised speech shown back to them; anything inside src/config/lessons.js, src/config/landmarks.js or src/config/activities.js that is lesson content.",
+
+    "MANY STRINGS ARE ALREADY BILINGUAL. The settings rows, the mystery hint and the Skip button already carry a Japanese <small> subtitle under an English line. For those, do not add a second Japanese line - make the existing Japanese the primary line and drop or demote the English instruction. Look at how #mystery-hint, .settings-row and #tour-skip are built before inventing a new pattern.",
+
+    "JAPANESE REGISTER: elementary-school children. Use friendly plain form ('マイクを押して話してみよう') rather than formal です/ます or casual slang. Keep it short - these sit in small UI chips and buttons. Kanji is fine at this age but keep it common; prefer あそぶ-level vocabulary where there is a choice. Do not machine-translate word for word; write what a Japanese teacher would actually put on the screen.",
+
+    "LAYOUT RISK: Japanese strings change width, and several of these live in tight fixed-size chips (#mic-status, #tour-counter, #tour-exit, .settings-state, the round refresh button beside the microphone, the progress panel). After translating, look at the screenshots and fix anything that wraps badly, overflows its chip, or collides. src/style.css already has small-screen media queries at the bottom - check those sizes too.",
+
+    "Put the strings somewhere sensible. Much of the copy is inline in index.html; some is in src/ui/hud.js (status messages, tour summary, finale) and src/main.js (the MESSAGES speech-error table). You do not need to build a full i18n framework - this game ships in one language - but do not scatter the same sentence in three places either.",
+
+    "Record the instructions-Japanese / labels-English rule in DESIGN_DECISIONS.md so it is not silently reversed later, and update CURRENT_STATE.md."
+  ],
+
+  "requirements": [
+    "Every instruction, direction, status message, button label, placeholder, title and aria-label that speaks to the player is in natural, child-appropriate Japanese.",
+    "All lesson English is untouched: target sentences, the tour sentence frame, landmark display names and signs, category labels, \"Let's make...\", 'Matsubara Tour', and the child's recognised speech.",
+    "Already-bilingual controls end up with Japanese as the primary line rather than gaining a duplicate second Japanese line.",
+    "Nothing overflows, wraps badly or collides at 1366x768 or in the small-screen media queries.",
+    "The game still plays end to end: choose a place, say/type the sentence, build it, and the speaking tour still runs.",
+    "No page errors."
+  ],
+
+  "constraints": [
+    "Do not change any game logic, 3D scene, buildings, pedestrians, vehicles, camera, audio or progression behaviour. This is a copy and layout task.",
+    "Do not alter the speech-recognition matching logic or the accepted-phrase lists - the child still speaks English and it must still be accepted exactly as now.",
+    "Do not translate lesson content in src/config/lessons.js, src/config/landmarks.js or src/config/activities.js.",
+    "Do not add an i18n dependency or any new package.",
+    "Do not rename DOM ids or CSS classes - other code and the .ai/ verification scripts select on them.",
+    "Do not modify anything under .ai/ except to add a new script of your own, and do not change existing verification scripts to make them pass.",
+    "Work only in index.html, src/style.css, src/ui/hud.js, src/main.js and, if genuinely needed, a new small strings module under src/config/ or src/ui/."
+  ],
+
+  "startingPoints": [
+    "index.html",
+    "src/ui/hud.js",
+    "src/main.js",
+    "src/style.css",
+    "DESIGN_DECISIONS.md"
+  ],
+
+  "validation": [
+    "npm run build",
+    "node .ai/verify-typing-setting.mjs 5199 - the teacher typing toggle still works (start the dev server with: npm run dev -- --port 5199). NOTE: this script asserts the toggle's state text is exactly 'On'/'Off'. If you translate those, update that script's two expectations to match your new strings - that is the one permitted edit to an existing .ai/ script, and say so in your report.",
+    "node .ai/verify-rename.mjs 5199 - renaming still works and lesson text is unchanged",
+    "node .ai/verify-stage-unlocks.mjs 5199 - progression still works",
+    "Capture the choice panel, speaking panel, settings panel, tour banner and finale with a Playwright script under .ai/ at 1366x768 and inspect them yourself for overflow and collisions before reporting done"
+  ],
+
+  "category": "ui-localisation",
+  "complexity": "medium",
+  "bounded": true,
+  "exploration": "local",
+  "risk": "medium",
+  "expectedCost": "large",
+  "executionStyle": "careful-detail"
+}

@@ -141,7 +141,7 @@ class Game {
     this.audio = createAudio();
 
     this.speech = createSpeech({
-      onStart: () => this.hud.setStatus('Listening...'),
+      onStart: () => this.hud.setStatus('聞いているよ…'),
       onResult: (text) => this.hud.setHeard(text),
       onEnd: (text) => this.onSpeechEnd(text),
       onError: (err) => this.onSpeechError(err),
@@ -324,7 +324,11 @@ class Game {
     if (!type) return;
     this.hud.setTarget(type);
     this.hud.setProgress(this.built, type);
-    this.hud.setStatus(this.speech.supported ? 'Press and speak' : 'Open in Chrome to speak - or type it');
+    this.hud.setStatus(
+      this.speech.supported
+        ? 'マイクを押して話してみよう'
+        : 'このブラウザーではマイクが使えないよ。Chromeで開いてね'
+    );
     this.hud.setHeard('');
     this.hud.setMicState('idle');
   }
@@ -337,14 +341,14 @@ class Game {
     if (this.phase !== 'ready') return;
 
     if (!this.speech.supported) {
-      this.hud.setStatus('This browser has no microphone support - use Chrome');
+      this.hud.setStatus('このブラウザーではマイクが使えないよ。Chromeで開いてね');
       this.hud.offerTyping(true);
       return;
     }
 
     this.phase = 'listening';
     this.hud.setMicState('listening');
-    this.hud.setStatus('Listening...');
+    this.hud.setStatus('聞いているよ…');
     this.hud.setHeard('');
     this.audio.micOn();
     this.listeningFor = 'build';
@@ -379,15 +383,15 @@ class Game {
     if (!target) return;
 
     const MESSAGES = {
-      'not-allowed': ['Microphone is blocked - allow it in the address bar', true],
-      'service-not-allowed': ['Microphone is blocked - allow it in the address bar', true],
-      'audio-capture': ['No microphone found', true],
-      network: ['Speech needs an internet connection', true],
-      'language-not-supported': ['English speech is unavailable here', true],
-      'no-speech': ['I did not hear anything. Try again!', false],
-      aborted: ['Try again!', false],
+      'not-allowed': ['アドレスバーでマイクを許可してね', true],
+      'service-not-allowed': ['アドレスバーでマイクを許可してね', true],
+      'audio-capture': ['マイクが見つからないよ', true],
+      network: ['音声入力にはインターネットが必要だよ', true],
+      'language-not-supported': ['ここでは英語の音声入力が使えないよ', true],
+      'no-speech': ['声が聞こえなかったよ。もう一度話してみよう！', false],
+      aborted: ['もう一度話してみよう！', false],
     };
-    const [message, offerTyping] = MESSAGES[err] || ['Try again!', true];
+    const [message, offerTyping] = MESSAGES[err] || ['もう一度話してみよう！', true];
 
     if (target === 'tour') {
       this.hud.setTourMicState('retry');
@@ -426,7 +430,7 @@ class Game {
     this.recorder.discard();   // only the take that worked is worth keeping
     this.hud.setMicState('retry');
     this.hud.wobble();
-    this.hud.setStatus('Try again!');
+    this.hud.setStatus('もう一度話してみよう！');
     this.audio.retry();
     // after a couple of misses, quietly offer the keyboard route
     if (this.failStreak >= 2) this.hud.offerTyping(true);
@@ -441,7 +445,7 @@ class Game {
     this.speech.abort();
     this.hud.showBackButton(false);
     this.hud.setMicState('success');
-    this.hud.setStatus('Building...', true);
+    this.hud.setStatus('つくっているよ…', true);
     this.hud.markCorrect();
     this.audio.success();
     this.hud.showPanel(false);
@@ -597,11 +601,11 @@ class Game {
     if (this.phase !== 'tour' || this.listeningFor) return;
 
     if (!this.speech.supported) {
-      this.hud.setTourStatus('This browser has no microphone support - use Chrome');
+      this.hud.setTourStatus('このブラウザーではマイクが使えないよ。Chromeで開いてね');
       return;
     }
     this.hud.setTourMicState('listening');
-    this.hud.setTourStatus('Listening...');
+    this.hud.setTourStatus('聞いているよ…');
     this.hud.setTourHeard('');
     this.audio.micOn();
     this.listeningFor = 'tour';
@@ -625,7 +629,7 @@ class Game {
 
     if (result.ok) {
       this.hud.setTourMicState('success');
-      this.hud.setTourStatus('Great!', true);
+      this.hud.setTourStatus('できた！', true);
       this.hud.tourCorrect(result.matched, def);
       this.tour.accept(type);
       // The sentence and the child's voice are kept for the guided tour; the
@@ -646,7 +650,7 @@ class Game {
     this.hud.tourWobble();
     this.audio.retry();
     this.hud.setTourStatus(
-      result.matched ? 'Say the whole sentence!' : 'Try again!'
+      result.matched ? '文をぜんぶ言ってみよう！' : 'もう一度話してみよう！'
     );
     // only after a couple of tries - the sentence should stay the child's own
     if (attempts >= 2) this.hud.showTourHints(def.hints);
@@ -964,7 +968,7 @@ nameForm.addEventListener('submit', (event) => {
   game.init(owner).catch((err) => {
     console.error(err);
     const status = document.getElementById('mic-status');
-    if (status) status.textContent = 'Something went wrong loading the town.';
+    if (status) status.textContent = '町を読み込めなかったよ。ページを開き直してね。';
   });
 });
 

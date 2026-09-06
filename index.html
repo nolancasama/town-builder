@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#8ecae6" />
-    <title>Matsubara Town — Speak &amp; Build</title>
+    <title>Matsubara Town — 英語で話して町をつくろう</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>" />
     <link rel="stylesheet" href="./src/style.css" />
   </head>
@@ -15,18 +15,17 @@
     <div id="name-entry">
       <form id="name-form" class="name-card" autocomplete="off">
         <div class="name-town" aria-hidden="true">🏘️</div>
-        <label for="player-name">What's your name?</label>
-        <div class="name-jp">なまえを いれてね</div>
+        <label for="player-name">なまえを おしえてね</label>
         <input
           id="player-name"
           name="player-name"
           type="text"
           maxlength="20"
-          placeholder="Ken"
+          placeholder="なまえ"
           autocomplete="name"
           autofocus
         />
-        <button type="submit">Start</button>
+        <button type="submit">はじめる</button>
       </form>
     </div>
 
@@ -35,6 +34,7 @@
       <div class="loading-inner">
         <div class="loading-town">🏘️</div>
         <div class="loading-title">Matsubara</div>
+        <div class="loading-status">町を準備しているよ…</div>
         <div class="loading-bar"><span id="loading-fill"></span></div>
       </div>
     </div>
@@ -42,58 +42,55 @@
     <!-- HUD -->
     <div id="hud" class="hidden">
       <div id="progress-panel">
-        <div id="progress-label">Town Progress: <b><span id="progress-count">0</span> / <span id="progress-total">8</span></b></div>
+        <div id="progress-label">町づくり：<b><span id="progress-count">0</span> / <span id="progress-total">8</span></b></div>
         <div id="progress-icons"></div>
       </div>
 
       <div id="top-right">
-        <button id="mute-btn" class="icon-btn" title="Sound on / off" aria-label="Sound on or off">
+        <button id="mute-btn" class="icon-btn" title="音をつける／消す" aria-label="音をつける／消す">
           <span id="mute-icon">🔊</span>
         </button>
-        <button id="settings-btn" class="icon-btn" title="Teacher settings" aria-label="Teacher settings">⚙️</button>
+        <button id="settings-btn" class="icon-btn" title="先生の設定" aria-label="先生の設定">⚙️</button>
         <div id="settings-panel" class="hidden">
           <button id="btn-toggle-typing" class="settings-row" type="button" aria-pressed="false">
-            <span class="settings-row-label">Allow typing instead of speaking</span>
-            <small>話す代わりに入力を許可</small>
-            <span id="typing-state" class="settings-state">Off</span>
+            <span class="settings-row-label">話す代わりに文字入力を使う</span>
+            <span id="typing-state" class="settings-state">オフ</span>
           </button>
           <button id="btn-reset-unlocks" class="settings-row" type="button">
-            <span class="settings-row-label">Reset building unlocks</span>
-            <small>建物のアンロックをリセット</small>
-            <span id="reset-confirm" class="reset-confirm-label">Tap again to confirm</span>
+            <span class="settings-row-label">建物のアンロックをリセット</span>
+            <span id="reset-confirm" class="reset-confirm-label">もう一度押すとリセット</span>
           </button>
-          <button id="btn-reset-cancel" class="settings-row ghost" type="button">Close</button>
+          <button id="btn-reset-cancel" class="settings-row ghost" type="button">閉じる</button>
         </div>
       </div>
 
       <div id="choice-panel" class="hidden">
-        <div id="choice-title">Let's make…</div>
+        <div id="choice-title" lang="en">Let's make…</div>
         <div id="choice-cards"></div>
         <div id="mystery-hint">
-          Finish a town to unlock new places!
-          <small>町を完成させると、新しい場所がアンロックされるよ！</small>
+          町を完成させると、新しい場所がアンロックされるよ！
         </div>
       </div>
 
       <div id="speech-panel">
         <div id="target-card">
-          <div id="target-hint">Say:</div>
-          <div id="target-sentence">We have a school in Matsubara.</div>
+          <div id="target-hint">言ってみよう：</div>
+          <div id="target-sentence" lang="en">We have a school in Matsubara.</div>
         </div>
         <div id="mic-row">
-          <button id="choice-back" class="round-btn" title="Choose something else" aria-label="Choose something else">
+          <button id="choice-back" class="round-btn" title="ほかの場所をえらぶ" aria-label="ほかの場所をえらぶ">
             <span aria-hidden="true">🔄</span>
           </button>
-          <button id="mic-btn" aria-label="Press and speak">
+          <button id="mic-btn" aria-label="マイクを押して話してみよう">
             <span class="mic-glyph">🎙️</span>
             <span class="mic-ring"></span>
           </button>
         </div>
-        <div id="mic-status">Press and speak</div>
-        <div id="heard"></div>
+        <div id="mic-status">マイクを押して話してみよう</div>
+        <div id="heard" lang="en"></div>
         <form id="type-form" class="hidden" autocomplete="off">
-          <input id="type-input" type="text" placeholder="Type the sentence…" />
-          <button type="submit">Build</button>
+          <input id="type-input" type="text" placeholder="文を入力してね…" aria-label="英語の文を入力" />
+          <button type="submit">建てる</button>
         </form>
       </div>
     </div>
@@ -101,64 +98,64 @@
       <!-- Speaking tour: "We can ___ in the ___." -->
       <div id="tour-panel" class="hidden">
         <div id="tour-card">
-          <div id="tour-place">STADIUM</div>
-          <div id="tour-frame"></div>
+          <div id="tour-place" lang="en">STADIUM</div>
+          <div id="tour-frame" lang="en"></div>
           <div id="tour-jp">ここでできることを英語で言ってみよう。</div>
           <div id="tour-jp-hint"></div>
           <div id="tour-hints" class="hidden"></div>
         </div>
         <div id="tour-controls">
-          <button id="tour-mic" class="mic-button" aria-label="Press and speak">
+          <button id="tour-mic" class="mic-button" aria-label="マイクを押して話してみよう">
             <span class="mic-glyph">🎙️</span>
             <span class="mic-ring"></span>
           </button>
-          <button id="tour-skip" class="skip-btn">Skip<small>スキップ</small></button>
+          <button id="tour-skip" class="skip-btn">スキップ</button>
         </div>
-        <div id="tour-status">Press and speak</div>
-        <div id="tour-heard"></div>
+        <div id="tour-status">マイクを押して話してみよう</div>
+        <div id="tour-heard" lang="en"></div>
       </div>
 
-      <div id="tour-title" class="hidden">Matsubara Tour</div>
-      <button id="tour-exit" class="hidden" title="Leave the tour" aria-label="Leave the tour">
+      <div id="tour-title" class="hidden" lang="en">Matsubara Tour</div>
+      <button id="tour-exit" class="hidden" title="ツアーをやめる" aria-label="ツアーをやめる">
         <span aria-hidden="true">✕</span>
         <small>ツアーをやめる</small>
       </button>
 
       <div id="tour-counter" class="hidden">
         <span id="tour-count">1 / 10</span>
-        <span id="tour-counter-label">Speaking Tour</span>
+        <span id="tour-counter-label">英語で話すツアー</span>
       </div>
 
       <!-- Phase 3: the guide speaks with the student's own recorded voice -->
       <div id="tour-subtitle" class="hidden">
-        <span id="subtitle-speaker">YOUR GUIDE</span>
+        <span id="subtitle-speaker" lang="en">YOUR GUIDE</span>
         <span id="subtitle-text"></span>
-        <span id="subtitle-advance" aria-hidden="true">▼&nbsp; click or space</span>
+        <span id="subtitle-advance" aria-hidden="true">▼&nbsp; クリック または スペースキー</span>
       </div>
 
     <!-- Landmark name card (explore mode) -->
     <div id="landmark-card" class="hidden">
       <div id="landmark-name-row">
         <div id="landmark-name">STADIUM</div>
-        <button id="landmark-rename" title="Rename this place" aria-label="Rename this place">✏️</button>
+        <button id="landmark-rename" title="この場所に名前をつける" aria-label="この場所に名前をつける">✏️</button>
       </div>
-      <div id="landmark-realname" class="hidden">STADIUM</div>
+      <div id="landmark-realname" class="hidden" lang="en">STADIUM</div>
       <form id="landmark-name-form" class="hidden" autocomplete="off">
-        <input id="landmark-name-input" type="text" maxlength="24" aria-label="New name" />
-        <button type="submit" id="landmark-name-save">OK</button>
+        <input id="landmark-name-input" type="text" maxlength="24" aria-label="新しい名前" />
+        <button type="submit" id="landmark-name-save">決定</button>
       </form>
-      <div id="landmark-sentence">We have a stadium in Matsubara.</div>
+      <div id="landmark-sentence" lang="en">We have a stadium in Matsubara.</div>
     </div>
 
     <!-- Speaking tour summary -->
     <div id="tour-summary" class="hidden">
       <div id="tour-summary-inner">
-        <div id="summary-title">すべての場所を見ました！</div>
-        <div id="summary-en">You visited every place!</div>
-        <div id="summary-score">0 / 0 places spoken</div>
+        <div id="summary-title">すべての場所を見たよ！</div>
+        <div id="summary-en">すべての場所をまわったよ！</div>
+        <div id="summary-score">話せた場所：0 / 0</div>
         <div id="summary-buttons">
-          <button id="btn-continue" class="big-btn">Continue<small>まだ言っていない場所をつづける</small></button>
-          <button id="btn-finish" class="big-btn primary">Guided Tour<small>ガイドツアーへ</small></button>
+          <button id="btn-continue" class="big-btn">まだ言っていない場所へ</button>
+          <button id="btn-finish" class="big-btn primary">ガイドツアーへ</button>
         </div>
       </div>
     </div>
@@ -166,12 +163,12 @@
     <!-- End of the guided tour -->
     <div id="tour-end" class="hidden">
       <div id="tour-end-inner">
-        <div id="tour-end-title">Great tour!</div>
-        <div id="tour-end-jp">すばらしいツアーでした！</div>
+        <div id="tour-end-title">ツアー大成功！</div>
+        <div id="tour-end-jp">みんなに町を紹介できたよ！</div>
         <div id="tour-end-score"></div>
         <div id="tour-end-buttons">
-          <button id="btn-end-explore" class="big-btn primary">Explore Town<small>まちを見る</small></button>
-          <button id="btn-end-again" class="big-btn">Play Again<small>もういちど</small></button>
+          <button id="btn-end-explore" class="big-btn primary">町を見てまわる</button>
+          <button id="btn-end-again" class="big-btn">もう一度あそぶ</button>
         </div>
       </div>
     </div>
@@ -182,29 +179,29 @@
         <span id="unlock-lock">🔒</span>
       </div>
       <div id="unlock-titles">
-        <div id="unlock-kicker">NEW PLACE UNLOCKED!</div>
-        <div id="unlock-name">???</div>
-        <div id="unlock-jp">新しい場所がアンロックされました！</div>
-        <div id="unlock-tap-hint">tap to continue</div>
+        <div id="unlock-kicker">新しい場所をアンロック！</div>
+        <div id="unlock-name" lang="en">???</div>
+        <div id="unlock-jp">次の町づくりでえらべるよ！</div>
+        <div id="unlock-tap-hint">タップしてつづける</div>
       </div>
     </div>
 
     <!-- Finale -->
     <div id="finale" class="hidden">
       <div id="finale-inner">
-        <div id="finale-title">Our town is complete!</div>
-        <div id="finale-sub">You built 10 places with your English.</div>
+        <div id="finale-title">町が完成したよ！</div>
+        <div id="finale-sub">英語で場所を10か所つくったよ！</div>
         <div id="finale-buttons">
-          <button id="btn-tour" class="big-btn primary">Speaking Tour<small>話してみよう</small></button>
-          <button id="btn-explore" class="big-btn">Explore Town</button>
-          <button id="btn-again" class="big-btn">Play Again</button>
+          <button id="btn-tour" class="big-btn primary">英語で話すツアーへ</button>
+          <button id="btn-explore" class="big-btn">町を見てまわる</button>
+          <button id="btn-again" class="big-btn">もう一度あそぶ</button>
         </div>
       </div>
     </div>
 
     <div id="explore-banner" class="hidden">
-      <span id="explore-message">Explore Town — tap a building</span>
-      <button id="btn-replay" class="ghost-btn">Play Again</button>
+      <span id="explore-message">町を見てまわろう — 建物をタップ</span>
+      <button id="btn-replay" class="ghost-btn">もう一度あそぶ</button>
     </div>
 
     <script type="module" src="./src/main.js"></script>

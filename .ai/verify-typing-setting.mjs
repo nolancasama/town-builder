@@ -35,23 +35,23 @@ await start();
 
 rec('old "Type it instead" button is gone', await page.locator('#type-toggle').count(), 0);
 rec('typing toggle exists in settings', await page.locator('#btn-toggle-typing').count(), 1);
-rec('defaults to Off', (await page.locator('#typing-state').textContent()).trim(), 'Off');
+rec('defaults to オフ', (await page.locator('#typing-state').textContent()).trim(), 'オフ');
 
 // Ask a prompt that would previously have offered typing.
 await page.evaluate(() => window.game.hud.offerTyping(true));
-rec('type form stays hidden while setting is Off',
+rec('type form stays hidden while setting is オフ',
   await page.locator('#type-form').evaluate((f) => f.classList.contains('hidden')), true);
 
 // Turn it on from settings.
 await page.locator('#settings-btn').click();
 await page.locator('#btn-toggle-typing').click();
-rec('label switches to On', (await page.locator('#typing-state').textContent()).trim(), 'On');
+rec('label switches to オン', (await page.locator('#typing-state').textContent()).trim(), 'オン');
 rec('type form appears once permitted',
   await page.locator('#type-form').evaluate((f) => f.classList.contains('hidden')), false);
 
 // Persistence across reload.
 await start();
-rec('setting persists across reload', (await page.locator('#typing-state').textContent()).trim(), 'On');
+rec('setting persists across reload', (await page.locator('#typing-state').textContent()).trim(), 'オン');
 
 // Typing still builds a place. Pick a building first - the target sentence only
 // exists once something has been chosen and the game is in the 'ready' phase.
@@ -75,7 +75,7 @@ rec('typing the sentence still builds', after > before, true);
 // Turning it back off hides the form again.
 await page.locator('#settings-btn').click();
 await page.locator('#btn-toggle-typing').click();
-rec('switches back to Off', (await page.locator('#typing-state').textContent()).trim(), 'Off');
+rec('switches back to オフ', (await page.locator('#typing-state').textContent()).trim(), 'オフ');
 rec('type form hidden again',
   await page.locator('#type-form').evaluate((f) => f.classList.contains('hidden')), true);
 

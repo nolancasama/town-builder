@@ -7,6 +7,16 @@ Implementation state. See `PROJECT_DESIGN.md` for the rules this follows and
 
 ## Built and working
 
+**Japanese classroom interface.** All player directions, controls, status and
+speech-error feedback are in short, child-friendly Japanese, including teacher
+settings, typing, the speaking tour, unlock reveal, finale and explore states.
+The English lesson surface is deliberately unchanged: target sentences, the
+tour sentence frame, landmark names/signs, place categories, activity hints,
+recognised speech, `Let's make...` and `Matsubara Tour` remain English. Stable
+English lesson nodes carry an English language hint for assistive technology.
+Long Japanese statuses, modal widths and the small-screen tour header have
+defensive wrapping and spacing so the translated chrome stays inside its chips.
+
 **Phase 1 — build the town.** Three building cards per round from a pool of 33
 places across six categories, chosen to differ in category. The child taps one,
 says *"We have a ___ in Matsubara."*, and it is built with a camera fly-in,

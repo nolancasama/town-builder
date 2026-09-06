@@ -94,6 +94,12 @@ export function createHUD(handlers = {}) {
     return span;
   }
 
+  function makeEnglishSpan(className, text) {
+    const span = makeSpan(className, text);
+    span.lang = 'en';
+    return span;
+  }
+
   function renderTourSentence(action, def) {
     const phrase = LESSON.placePhrase(def);
     const [preposition, ...placeWords] = phrase.split(' ');
@@ -148,7 +154,7 @@ export function createHUD(handlers = {}) {
   }
 
   function applyTypingSetting() {
-    el.typingState.textContent = allowTyping ? 'On' : 'Off';
+    el.typingState.textContent = allowTyping ? 'オン' : 'オフ';
     el.btnToggleTyping.setAttribute('aria-pressed', String(allowTyping));
     el.btnToggleTyping.classList.toggle('on', allowTyping);
     // The form only ever shows while a sentence is actually being asked for;
@@ -288,7 +294,7 @@ export function createHUD(handlers = {}) {
             makeSpan('choice-icon silhouette', def.icon),
             makeSpan('lock-badge', '🔒'),
             makeSpan('choice-name', '???'),
-            makeSpan('choice-kind', 'Locked')
+            makeSpan('choice-kind', 'まだえらべない')
           );
           card.addEventListener('click', () => {
             card.classList.remove('nudge');
@@ -300,10 +306,10 @@ export function createHUD(handlers = {}) {
           card.className = 'choice-card';
           const content = [
             makeSpan('choice-icon', def.icon),
-            makeSpan('choice-name', def.displayName),
-            makeSpan('choice-kind', def.category),
+            makeEnglishSpan('choice-name', def.displayName),
+            makeEnglishSpan('choice-kind', def.category),
           ];
-          if (slot.isNew) content.unshift(makeSpan('new-badge', 'NEW'));
+          if (slot.isNew) content.unshift(makeSpan('new-badge', 'あたらしい'));
           card.replaceChildren(...content);
           card.addEventListener('click', () => {
             card.classList.add('picked');
@@ -411,8 +417,7 @@ export function createHUD(handlers = {}) {
       // the counter has done its job once the town is finished
       document.getElementById('progress-panel').classList.toggle('hidden', show);
       if (builtCount !== undefined) {
-        const plural = builtCount === 1 ? 'place' : 'places';
-        el.finaleSub.textContent = `You built ${builtCount} ${plural} with your English.`;
+        el.finaleSub.textContent = `英語で場所を${builtCount}か所つくったよ！`;
       }
       el.finale.classList.toggle('hidden', false);
       requestAnimationFrame(() => el.finale.classList.toggle('show', show));
@@ -449,7 +454,7 @@ export function createHUD(handlers = {}) {
       el.tourHints.classList.add('hidden');
       el.tourHints.innerHTML = '';
       el.tourCard.classList.remove('correct');
-      el.tourStatus.textContent = 'Press and speak';
+      el.tourStatus.textContent = 'マイクを押して話してみよう';
       el.tourStatus.classList.remove('good');
       el.tourHeard.textContent = '';
       el.tourHeard.classList.remove('show');
@@ -487,6 +492,7 @@ export function createHUD(handlers = {}) {
       for (const hint of hints) {
         const chip = document.createElement('span');
         chip.className = 'hint-chip';
+        chip.lang = 'en';
         chip.textContent = hint;
         el.tourHints.appendChild(chip);
       }
@@ -510,9 +516,11 @@ export function createHUD(handlers = {}) {
      * spoken sentence - nobody is ever kept in a mandatory loop.
      */
     showTourSummary({ spoken, total, allSpoken }) {
-      el.summaryTitle.textContent = allSpoken ? 'ぜんぶ 言えました！' : 'すべての場所を見ました！';
-      el.summaryEn.textContent = allSpoken ? 'You spoke about every place!' : 'You visited every place!';
-      el.summaryScore.textContent = `${spoken} / ${total} places spoken`;
+      el.summaryTitle.textContent = allSpoken ? 'ぜんぶ言えたよ！' : 'すべての場所を見たよ！';
+      el.summaryEn.textContent = allSpoken
+        ? 'すべての場所について話せたよ！'
+        : 'まだ言っていない場所にもチャレンジできるよ。';
+      el.summaryScore.textContent = `話せた場所：${spoken} / ${total}`;
       el.btnContinue.classList.toggle('hidden', allSpoken);
       el.tourSummary.classList.remove('hidden');
       requestAnimationFrame(() => el.tourSummary.classList.add('show'));
@@ -525,7 +533,7 @@ export function createHUD(handlers = {}) {
 
     /** The relaxed end state: no more prompts, the town just runs. */
     showFinishedBanner({ spoken, total }) {
-      el.exploreMessage.textContent = `Great job!  ${spoken} / ${total} places spoken`;
+      el.exploreMessage.textContent = `よくできたね！ 話せた場所：${spoken} / ${total}`;
       el.exploreBanner.classList.remove('hidden');
     },
 
@@ -573,15 +581,14 @@ export function createHUD(handlers = {}) {
     setTourStop(index, total, name) {
       el.tourCount.textContent = `${index} / ${total}`;
       el.tourCounterLabel = el.tourCounterLabel || document.getElementById('tour-counter-label');
-      el.tourCounterLabel.textContent = name || 'Guided Tour';
+      el.tourCounterLabel.textContent = name || 'ガイドツアー';
       el.tourCounter.classList.remove('hidden');
     },
 
     showGuidedEnd({ stops, lines, spoken }) {
-      const placeWord = stops === 1 ? 'place' : 'places';
       const voice = spoken
-        ? `${stops} ${placeWord} · ${spoken} of ${lines} sentences in your own voice`
-        : `${stops} ${placeWord} · ${lines} of your sentences`;
+        ? `${stops}か所 ・ 自分の声 ${spoken} / ${lines}文`
+        : `${stops}か所 ・ ${lines}文を紹介したよ`;
       el.tourEndScore.textContent = voice;
       el.tourEnd.classList.remove('hidden');
       requestAnimationFrame(() => el.tourEnd.classList.add('show'));

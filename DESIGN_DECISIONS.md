@@ -203,3 +203,19 @@ the session; otherwise the option is never surfaced to the child at all.
 The prompts still decide when typing *would* be appropriate - `offerTyping()` is
 unchanged at its call sites - but the HUD now gates that on the teacher setting,
 so the two concerns stay separate.
+
+## 2026-09-06 - Japanese instructions frame English lesson content
+
+The classroom interface uses Japanese for every direction, control, status,
+error and explanation, written in short, friendly plain form for elementary
+school children. English remains wherever it is the material being taught: the
+target sentences and speaking-tour frame, landmark names and signs, category
+labels, activity hints, recognised speech, `Let's make...` and `Matsubara Tour`.
+
+This split is a teaching invariant, not a general localisation preference.
+Translating the lesson labels would remove the English children are meant to
+read and say; leaving directions in English would make the game depend on a
+teacher translating the interface. When a string is genuinely ambiguous, it
+stays English until its role is decided. Existing bilingual controls show the
+Japanese instruction as the primary line instead of repeating it under an
+English instruction.
