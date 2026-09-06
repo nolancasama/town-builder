@@ -19,16 +19,15 @@ const CAR_WIDTH = 1.9;
 /**
  * Deadlock guard, not a comfort target.
  *
- * A car's yield is already hard-bounded in code: vehicles.js caps it at
- * MAX_TRAFFIC_YIELD_MS (1800ms), after which the vehicle claims priority and
- * drives on whatever the pedestrian is doing. What this probe measures is
- * wider than that window - it sees the car decelerate into the wait, hold, and
- * ramp back up - and it samples under SwiftShader at roughly 4 FPS, so each
- * sample is a ~250ms step. 3500ms flagged that legitimate decel + capped wait +
- * reaccel sequence as a failure. 6000ms still catches a genuine deadlock (which
- * would be unbounded, not merely long) while allowing the bounded one.
+ * Vehicles now hold at a junction stop line until admitted (see the junction
+ * admission block in vehicles.js), so a legitimate wait is longer than it used
+ * to be. The hard bound is no longer the yield timeout but STUCK_RECYCLE_MS:
+ * any vehicle with no progress for 10s is recycled elsewhere on the network, so
+ * nothing can be stationary indefinitely. This sits just above that bound, with
+ * room for the ~250ms sampling step under SwiftShader, and so still catches a
+ * genuine deadlock - which would be unbounded, not merely long.
  */
-const MAX_STATIONARY_MS = 6_000;
+const MAX_STATIONARY_MS = 11_000;
 const MIME = {
   '.html': 'text/html',
   '.js': 'text/javascript',

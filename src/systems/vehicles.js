@@ -33,6 +33,72 @@ const FOLLOW_CREEP_MS = 900;
  */
 const OVERLAP_BLOCK_MS = 2500;
 
+/* ---------------- junction admission ---------------- */
+/**
+ * "Do not block the box", plus one occupant at a time.
+ *
+ * Measured cause of the gridlock this replaces: cars drove into a junction,
+ * stopped inside it because the road beyond was full, and blocked every other
+ * approach. Over a 300s simulation at a 60fps timestep that produced 584 stalls
+ * longer than three seconds and left four cars piled around one junction for
+ * 228 of those 300 seconds.
+ *
+ * The conflict rule is deliberately the simplest one that is physically true
+ * here: these junctions are barely wider than a car is long, and vehicles pick
+ * their exit at random with no lane structure, so every route through a junction
+ * genuinely conflicts with every other. A turn-by-turn conflict matrix would be
+ * more code describing a distinction the geometry does not support.
+ */
+const JUNCTION_RADIUS = 6.5;
+/** Where a car starts caring about the junction ahead. */
+const JUNCTION_APPROACH = 11;
+/**
+ * Clear road needed ahead before entering, when the vehicle ahead is stopped.
+ *
+ * Tuned, not derived. The geometrically "correct" figure - cross the whole box
+ * and fit a car beyond it, about 18m - is unusable on a town with short blocks:
+ * during any congestion there is nearly always a stopped car within 18m, so no
+ * car ever entered any junction and throughput halved. This is roughly the box
+ * plus a car length, which keeps cars out of the middle without freezing the
+ * network, and the failsafe below covers what it misses.
+ */
+const JUNCTION_EXIT_NEED = JUNCTION_RADIUS + 5;
+/** A vehicle ahead moving faster than this will have cleared the exit in time. */
+const JUNCTION_EXIT_MOVING_SPEED = 1.2;
+/** Stop line, measured from the junction centre. */
+const JUNCTION_STOP_LINE = JUNCTION_RADIUS + 1.2;
+/**
+ * An occupant that has not cleared in this long is presumed wedged and its
+ * claim is released, so one confused car cannot close a junction for good.
+ */
+const JUNCTION_HOLD_MS = 6000;
+/**
+ * Emergency failsafe: a vehicle with no meaningful progress for this long is
+ * recycled to a fresh position elsewhere on the network.
+ *
+ * This is what actually guarantees no permanent jam. Releasing a junction claim
+ * does not move a physically wedged car, so a full gridlock ring - A blocked by
+ * B, B by C, C by A - cannot resolve itself no matter how the priority rules are
+ * arranged. Recycling is invisible here because traffic is a pool that respawns
+ * vehicles continuously anyway, and it is strictly better than the alternative
+ * of reversing cars through a junction in front of a class of children.
+ */
+const STUCK_RECYCLE_MS = 10000;
+/** Below this speed a vehicle counts as making no progress. */
+const STUCK_SPEED = 0.3;
+/**
+ * Deadlock breaker. A car that has been stopped this long at the head of a
+ * junction queue is forced through, exit space or not.
+ *
+ * This is not the blanket "patience" timer that was tried and removed: that one
+ * admitted any car that had merely *waited* long enough, which recreated the
+ * box-blocking it was supposed to prevent. This fires on measured lack of
+ * progress, only for the longest waiter, and only one car at a time, because
+ * the junction claim still admits exactly one. It converts most long stalls into
+ * short ones so the recycle failsafe is rarely reached.
+ */
+const JUNCTION_FORCE_MS = 5500;
+
 /**
  * VEHICLES
  * --------
@@ -65,6 +131,8 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
   let pedestrians = null;
   const tmp = new THREE.Vector2();
   const trafficBuckets = new Map();
+  // diagnostics for the traffic audits; not used by gameplay
+  const stats = { recycles: 0 };
 
   // cars avoid the narrowest country lanes so they never look wedged in
   const drivable = graph.edgesOfClass(['main', 'minor']);
@@ -85,6 +153,9 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
   }
 
   function spawn(v) {
+    // A recycled vehicle must not keep a junction reserved from its last life.
+    releaseJunction(v);
+    if (v.waitingNode) { junctionState(v.waitingNode).waiting.delete(v); v.waitingNode = null; }
     const pool = v.kind === 'car' ? drivable : graph.edges;
     v.baseSpeed = v.kind === 'car' ? rng.range(5.5, 8.5) : rng.range(3, 4.4);
     v.speed = v.baseSpeed;
@@ -100,6 +171,9 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     v.followBlockedSince = 0;
     v.followCreepUntil = 0;
     v.overlapBlockedSince = 0;
+    v.claimedNode = null;
+    v.waitingNode = null;
+    v.stuckMs = 0;
     v.nextStop = rng.range(8, 30);
     for (let attempt = 0; attempt < 16; attempt++) {
       const edge = pool[Math.floor(rng() * pool.length)];
@@ -194,6 +268,130 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     }
   }
 
+  /* ---------------- junction admission ---------------- */
+
+  /** Per-node claim state: who is crossing, and who is queued to. */
+  const junctions = new Map();
+  function junctionState(node) {
+    let j = junctions.get(node);
+    if (!j) { j = { occupant: null, since: 0, waiting: new Map() }; junctions.set(node, j); }
+    return j;
+  }
+
+  /** The node this vehicle is driving toward, and how far off it is. */
+  function nodeAhead(v) {
+    const node = v.forward ? v.edge.b : v.edge.a;
+    const distance = v.forward ? (v.edge.length - v.t) : v.t;
+    return { node, distance };
+  }
+
+  function distanceToNode(v, node) {
+    return Math.hypot(v.group.position.x - node.pos.x, v.group.position.z - node.pos.y);
+  }
+
+  /** Give up a claim, whether by clearing the junction or by being recycled. */
+  function releaseJunction(v) {
+    if (!v.claimedNode) return;
+    const j = junctions.get(v.claimedNode);
+    if (j && j.occupant === v) { j.occupant = null; j.since = 0; }
+    v.claimedNode = null;
+  }
+
+  /**
+   * Decide whether `v` may proceed through the junction it is approaching.
+   * Returns a speed ceiling: Infinity when it is free to carry on, 0 when it
+   * must hold at the stop line.
+   */
+  function junctionSpeedCap(v, now) {
+    // Already crossing: finish. A car inside is never asked to yield to one
+    // outside - that is what turns a queue into a blockage.
+    if (v.claimedNode) {
+      const cleared = distanceToNode(v, v.claimedNode) > JUNCTION_RADIUS + halfLength(v);
+      const expired = now - (junctions.get(v.claimedNode)?.since || now) > JUNCTION_HOLD_MS;
+      if (cleared || expired) releaseJunction(v);
+      return Infinity;
+    }
+
+    const { node, distance } = nodeAhead(v);
+    if (distance > JUNCTION_APPROACH) {
+      if (v.waitingNode) {
+        junctionState(v.waitingNode).waiting.delete(v);
+        v.waitingNode = null;
+      }
+      return Infinity;
+    }
+
+    const j = junctionState(node);
+    if (v.waitingNode !== node) {
+      if (v.waitingNode) junctionState(v.waitingNode).waiting.delete(v);
+      v.waitingNode = node;
+    }
+    if (!j.waiting.has(v)) j.waiting.set(v, now);          // arrival time
+    const waitedMs = now - j.waiting.get(v);
+
+    // A stale occupant that never cleared must not hold the junction forever.
+    if (j.occupant && (!j.occupant.group.visible || now - j.since > JUNCTION_HOLD_MS)) {
+      releaseJunction(j.occupant);
+    }
+    if (j.occupant && j.occupant !== v) return 0;
+
+    // Fairness: longest wait goes first, ties broken on the vehicle's own id so
+    // the outcome is stable rather than frame-order noise.
+    //
+    // Only among those that can actually move, though. A car queued behind
+    // another is registered as waiting here too, and picking it as first in line
+    // starves every other approach while it sits unable to advance - measured as
+    // a car with a completely clear road ahead waiting fourteen seconds for a
+    // junction. A blocked car cannot take its turn, so it does not get one.
+    const canProceed = (c) => {
+      const g = leadVehicle(c).gap;
+      return !(g < FOLLOW_STOP_GAP * 2);
+    };
+    if (!canProceed(v)) return 0;
+
+    let firstInLine = v;
+    let bestArrival = j.waiting.get(v);
+    for (const [other, arrival] of j.waiting) {
+      if (!other.group.visible) { j.waiting.delete(other); continue; }
+      if (other !== v && !canProceed(other)) continue;
+      if (arrival < bestArrival
+        || (arrival === bestArrival && other.group.uuid < firstInLine.group.uuid)) {
+        firstInLine = other;
+        bestArrival = arrival;
+      }
+    }
+    if (firstInLine !== v) return 0;
+
+    // Do not block the box.
+    //
+    // This is absolute - it is never overridden by waiting long enough. An
+    // earlier version let a car in after five seconds regardless, which simply
+    // recreated the blockage the rule exists to prevent: the car entered with
+    // nowhere to go and sat in the middle.
+    //
+    // The test asks whether the exit is *actually* obstructed, not merely
+    // occupied. A vehicle ahead that is still moving will have cleared the space
+    // by the time this car arrives, so only a stopped one counts. Demanding a
+    // full car-length-plus-junction gap against moving traffic would leave cars
+    // queueing at empty junctions.
+    const forcing = (v.stuckMs || 0) > JUNCTION_FORCE_MS;
+    const ahead = leadVehicle(v);
+    if (!forcing
+      && ahead.lead
+      && (ahead.lead.speed || 0) < JUNCTION_EXIT_MOVING_SPEED
+      && ahead.gap < JUNCTION_EXIT_NEED) {
+      return 0;
+    }
+    void waitedMs;
+
+    j.occupant = v;
+    j.since = now;
+    j.waiting.delete(v);
+    v.claimedNode = node;
+    v.waitingNode = null;
+    return Infinity;
+  }
+
   /** Half the body length of a vehicle, used for bumper-to-bumper maths. */
   function halfLength(v) {
     return (v.group.userData.length || (v.kind === 'car' ? 3.8 : 1.6)) / 2;
@@ -209,11 +407,12 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
    * Oncoming traffic is naturally excluded: it sits on the other half of the
    * carriageway, so its lateral offset is far outside the lane corridor.
    */
-  function gapAhead(v) {
+  function leadVehicle(v) {
     const hx = Math.sin(v.group.rotation.y);
     const hz = Math.cos(v.group.rotation.y);
     const myHalf = halfLength(v);
     let best = Infinity;
+    let lead = null;
     for (const o of nearbyVehicles(v.group.position.x, v.group.position.z, FOLLOW_LOOKAHEAD)) {
       if (o === v || !o.group.visible) continue;
       const dx = o.group.position.x - v.group.position.x;
@@ -223,9 +422,13 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       const across = Math.abs(dx * hz - dz * hx);
       if (across > FOLLOW_LANE_HALF_WIDTH + halfWidthOf(o)) continue;  // another lane
       const gap = along - myHalf - halfLength(o);
-      if (gap < best) best = gap;
+      if (gap < best) { best = gap; lead = o; }
     }
-    return best;
+    return { gap: best, lead };
+  }
+
+  function gapAhead(v) {
+    return leadVehicle(v).gap;
   }
 
   function halfWidthOf(o) {
@@ -362,6 +565,23 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     // it can only ever slow a vehicle down, never speed one up past a junction
     // limit or override a pedestrian yield. A vehicle already claiming priority
     // through a crossing still has to stop for a solid car ahead of it.
+    // Junction admission. A car refused entry brakes to a halt at the stop line
+    // short of the box rather than rolling into it and blocking every approach.
+    if (v.kind === 'car') {
+      const junctionCap = junctionSpeedCap(v, now);
+      if (junctionCap === 0) {
+        const { distance } = nodeAhead(v);
+        const toStopLine = distance - JUNCTION_STOP_LINE;
+        if (toStopLine <= 0) {
+          v.speed = 0;
+        } else {
+          // Ease down over the remaining distance so the stop looks deliberate.
+          const allowed = Math.max(0, Math.min(v.speed, toStopLine * 1.6));
+          v.speed += (allowed - v.speed) * Math.min(1, dt * 8);
+        }
+      }
+    }
+
     const followCap = followSpeedCap(v, now);
     if (v.speed > followCap) {
       // Ease down rather than snapping, except at touching distance where the
@@ -455,7 +675,27 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
         v.trafficYieldStartedAt = 0;
       }
     }
+    // Emergency failsafe. Anything still wedged after every other rule has had
+    // its turn gets quietly recycled somewhere else on the network.
+    if (v.speed < STUCK_SPEED) {
+      v.stuckMs = (v.stuckMs || 0) + dt * 1000;
+      if (v.stuckMs > STUCK_RECYCLE_MS) {
+        v.stuckMs = 0;
+        stats.recycles++;
+        spawn(v);
+        place(v, true);
+        return;
+      }
+    } else {
+      v.stuckMs = 0;
+    }
+
     v.group.userData.speed = v.speed;
+    // Cheap introspection for the traffic audits in .ai/ - no per-frame cost
+    // beyond three assignments, and it makes a jam diagnosable.
+    v.group.userData.junctionState = v.claimedNode ? 'crossing' : (v.waitingNode ? 'waiting' : 'driving');
+    v.group.userData.followGap = v.kind === 'car' ? gapAhead(v) : Infinity;
+    v.group.userData.waitingFor = v.waitingNode ? v.waitingNode.id : -1;
     v.group.userData.yielding = Boolean(v.yielding);
     v.group.userData.trafficYieldTime = v.trafficYieldTime;
     v.group.userData.trafficPriorityDistance = v.trafficPriorityDistance;
@@ -544,6 +784,9 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
         const over = v.kind === 'car' ? counts.car > wantCars : counts.bike > wantBikes;
         if (!over) continue;
         counts[v.kind]--;
+        // Hand back any junction it held or was queued for before it leaves.
+        releaseJunction(v);
+        if (v.waitingNode) { junctionState(v.waitingNode).waiting.delete(v); v.waitingNode = null; }
         v.group.visible = false;
         (v.kind === 'car' ? carPool : bikePool).push(v);
         active.splice(i, 1);
@@ -554,6 +797,11 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     update(dt) {
       for (const v of active) advance(v, dt);
       rebuildTrafficBuckets();
+    },
+
+    /** Traffic diagnostics for .ai/ audits. */
+    stats() {
+      return { ...stats, active: active.length };
     },
   };
 }
