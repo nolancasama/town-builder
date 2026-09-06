@@ -165,3 +165,19 @@ onto themselves. `normalBias` is now derived from the actual texel size
 (`extent * 2 / mapSize.x * 1.4`), which also keeps it correct on the 1024 map
 low-power Chromebooks fall back to. Switching wall geometry does not affect
 this; only the bias does.
+
+## 2026-09-06 - Typing is a teacher setting, not an in-panel escape hatch
+
+"Type it instead" used to appear as a button in the speaking panel, revealed
+automatically after a couple of failed attempts or certain speech errors. That
+offered the child a way out of speaking practice at precisely the moment
+speaking got difficult, which undercuts the point of the exercise.
+
+Typing now lives in the teacher settings panel as "Allow typing instead of
+speaking", off by default and persisted in localStorage. A class that needs it
+(no working microphone, a child who cannot speak aloud today) turns it on for
+the session; otherwise the option is never surfaced to the child at all.
+
+The prompts still decide when typing *would* be appropriate - `offerTyping()` is
+unchanged at its call sites - but the HUD now gates that on the teacher setting,
+so the two concerns stay separate.

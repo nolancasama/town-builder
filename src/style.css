@@ -672,6 +672,20 @@ html, body {
 #btn-reset-unlocks.armed { background: #fff3dc; }
 #btn-reset-unlocks.armed .reset-confirm-label { display: block; }
 
+/* On/off pill for toggle rows, sitting clear of the row's two text lines. */
+.settings-state {
+  position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  background: #ececec;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.settings-row.on .settings-state { color: #fff; background: var(--accent-deep, #3d8b5f); }
+/* keep the label clear of the pill */
+#btn-toggle-typing .settings-row-label,
+#btn-toggle-typing small { padding-right: 46px; }
+
 /* ---------------- Unlock reveal ---------------- */
 #unlock-reveal {
   position: fixed; inset: 0; z-index: 45;

@@ -52,6 +52,11 @@
         </button>
         <button id="settings-btn" class="icon-btn" title="Teacher settings" aria-label="Teacher settings">⚙️</button>
         <div id="settings-panel" class="hidden">
+          <button id="btn-toggle-typing" class="settings-row" type="button" aria-pressed="false">
+            <span class="settings-row-label">Allow typing instead of speaking</span>
+            <small>話す代わりに入力を許可</small>
+            <span id="typing-state" class="settings-state">Off</span>
+          </button>
           <button id="btn-reset-unlocks" class="settings-row" type="button">
             <span class="settings-row-label">Reset building unlocks</span>
             <small>建物のアンロックをリセット</small>
@@ -84,7 +89,6 @@
         <div id="mic-status">Press and speak</div>
         <div id="heard"></div>
         <button id="choice-back" class="ghost-btn">↩ Choose something else</button>
-        <button id="type-toggle" class="ghost-btn hidden">⌨️ Type it instead</button>
         <form id="type-form" class="hidden" autocomplete="off">
           <input id="type-input" type="text" placeholder="Type the sentence…" />
           <button type="submit">Build</button>

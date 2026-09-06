@@ -31,7 +31,8 @@ export function createHUD(handlers = {}) {
     choiceTitle: $('choice-title'),
     choiceCards: $('choice-cards'),
     choiceBack: $('choice-back'),
-    typeToggle: $('type-toggle'),
+    btnToggleTyping: $('btn-toggle-typing'),
+    typingState: $('typing-state'),
     typeForm: $('type-form'),
     typeInput: $('type-input'),
     landmarkCard: $('landmark-card'),
@@ -102,10 +103,6 @@ export function createHUD(handlers = {}) {
   el.mic.addEventListener('click', () => handlers.onMic && handlers.onMic());
   el.choiceBack.addEventListener('click', () => handlers.onBack && handlers.onBack());
   el.mute.addEventListener('click', () => handlers.onMute && handlers.onMute());
-  el.typeToggle.addEventListener('click', () => {
-    el.typeForm.classList.toggle('hidden');
-    el.typeInput.focus();
-  });
   el.typeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const value = el.typeInput.value;
@@ -124,6 +121,43 @@ export function createHUD(handlers = {}) {
     el.settingsPanel.classList.add('hidden');
     el.btnResetUnlocks.classList.remove('armed');
   }
+
+  /**
+   * Typing used to appear as a "Type it instead" button in the speaking panel,
+   * offered automatically after a couple of failed attempts. That put an opt-out
+   * of the speaking practice in front of the child at the exact moment speaking
+   * got hard. It is now a teacher setting: off by default, and when a class
+   * needs it, on for the whole session rather than per stumble.
+   */
+  const TYPING_KEY = 'townbuilder.allowTyping';
+  // Whether the current prompt would like to offer typing, independent of
+  // whether the teacher has permitted it.
+  let typingWanted = false;
+  let allowTyping = false;
+  try {
+    allowTyping = window.localStorage.getItem(TYPING_KEY) === '1';
+  } catch (err) {
+    console.warn('[hud] localStorage unavailable - typing preference will not persist:', err && err.message);
+  }
+
+  function applyTypingSetting() {
+    el.typingState.textContent = allowTyping ? 'On' : 'Off';
+    el.btnToggleTyping.setAttribute('aria-pressed', String(allowTyping));
+    el.btnToggleTyping.classList.toggle('on', allowTyping);
+    // The form only ever shows while a sentence is actually being asked for;
+    // `offerTyping` owns that, this owns whether it is permitted at all.
+    if (!allowTyping) el.typeForm.classList.add('hidden');
+  }
+  applyTypingSetting();
+
+  el.btnToggleTyping.addEventListener('click', () => {
+    allowTyping = !allowTyping;
+    try {
+      window.localStorage.setItem(TYPING_KEY, allowTyping ? '1' : '0');
+    } catch { /* preference simply will not persist */ }
+    applyTypingSetting();
+    if (allowTyping && typingWanted) el.typeForm.classList.remove('hidden');
+  });
   el.settingsBtn.addEventListener('click', () => el.settingsPanel.classList.toggle('hidden'));
   el.btnResetCancel.addEventListener('click', closeSettings);
   el.btnResetUnlocks.addEventListener('click', () => {
@@ -298,9 +332,12 @@ export function createHUD(handlers = {}) {
       el.panel.classList.toggle('away', !show);
     },
 
+    /**
+     * The prompt asks for typing; the teacher setting decides whether it appears.
+     */
     offerTyping(show) {
-      el.typeToggle.classList.toggle('hidden', !show);
-      if (!show) el.typeForm.classList.add('hidden');
+      typingWanted = show;
+      el.typeForm.classList.toggle('hidden', !(show && allowTyping));
     },
 
     setMuted(muted) {
