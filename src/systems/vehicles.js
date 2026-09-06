@@ -8,6 +8,31 @@ const TRAFFIC_CELL_SIZE = 8;
 const CAR_WIDTH = 1.9;
 const PEDESTRIAN_CLEARANCE = 0.4;
 
+/* ---------------- car following ---------------- */
+/** Bumper-to-bumper distance at which a vehicle comes to a complete stop. */
+const FOLLOW_STOP_GAP = 1.1;
+/** Gap at which it begins easing off, ramping down to a stop at STOP_GAP. */
+const FOLLOW_SLOW_GAP = 7.0;
+/** How far ahead to bother looking. */
+const FOLLOW_LOOKAHEAD = 16;
+/** Half-width of the corridor counted as "my lane". */
+const FOLLOW_LANE_HALF_WIDTH = CAR_WIDTH * 0.75;
+/**
+ * A queue always has an unblocked leader, so following cannot deadlock on a
+ * straight road. It can only bind in a fully packed cycle - a ring road with no
+ * gap anywhere. This lets a vehicle that has been held for this long creep
+ * regardless, which unwinds that case instead of freezing the street.
+ */
+const FOLLOW_STUCK_MS = 4200;
+const FOLLOW_CREEP_MS = 900;
+/**
+ * The junction-overlap rollback needs its own breaker for the same reason the
+ * yield does. Without one, two vehicles that end up body-to-body simply refuse
+ * every step forever and park in the road. A momentary clip as they separate is
+ * far less noticeable than a car frozen in the street for the rest of the game.
+ */
+const OVERLAP_BLOCK_MS = 2500;
+
 /**
  * VEHICLES
  * --------
@@ -72,6 +97,9 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
     v.trafficYieldOriginZ = v.group.position.z;
     v.trafficPriorityDistance = 0;
     v.trafficPriorityTime = 0;
+    v.followBlockedSince = 0;
+    v.followCreepUntil = 0;
+    v.overlapBlockedSince = 0;
     v.nextStop = rng.range(8, 30);
     for (let attempt = 0; attempt < 16; attempt++) {
       const edge = pool[Math.floor(rng() * pool.length)];
@@ -81,14 +109,62 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       setLateral(v);
       place(v, true);
       const length = v.kind === 'car' ? (v.group.userData.length || 3.8) : 1.3;
-      if (!pedestrians?.hasAgentInVehiclePath(
+      const onAPedestrian = pedestrians?.hasAgentInVehiclePath(
         v.group.position.x,
         v.group.position.z,
         v.group.rotation.y,
         length,
         PEDESTRIAN_CLEARANCE
-      )) break;
+      );
+      // Also refuse to appear inside another vehicle. Traffic is re-seeded
+      // whenever the town's liveliness changes, so without this a car can drop
+      // straight on top of one already driving there.
+      if (!onAPedestrian && !overlapsTraffic(v)) break;
     }
+  }
+
+  /**
+   * Would `v`, placed at (x, z) facing `heading`, intersect another vehicle?
+   * Separating-axis test on the two oriented bodies, so cars in adjacent lanes
+   * passing side by side are correctly treated as clear.
+   */
+  function wouldOverlapTraffic(v, x, z, heading) {
+    const ahl = halfLength(v);
+    const ahw = halfWidthOf(v);
+    const aax = Math.sin(heading);
+    const aaz = Math.cos(heading);
+    for (const o of nearbyVehicles(x, z, FOLLOW_LOOKAHEAD)) {
+      if (o === v || !o.group.visible) continue;
+      const bhl = halfLength(o);
+      const bhw = halfWidthOf(o);
+      const bax = Math.sin(o.group.rotation.y);
+      const baz = Math.cos(o.group.rotation.y);
+      const dx = o.group.position.x - x;
+      const dz = o.group.position.z - z;
+      let hit = true;
+      const axes = [[aax, aaz], [-aaz, aax], [bax, baz], [-baz, bax]];
+      for (const [ux, uz] of axes) {
+        const dist = Math.abs(dx * ux + dz * uz);
+        const ra = ahl * Math.abs(aax * ux + aaz * uz) + ahw * Math.abs(-aaz * ux + aax * uz);
+        const rb = bhl * Math.abs(bax * ux + baz * uz) + bhw * Math.abs(-baz * ux + bax * uz);
+        if (dist > ra + rb) { hit = false; break; }
+      }
+      if (hit) return true;
+    }
+    return false;
+  }
+
+  /** Is this vehicle's body currently intersecting another active one? */
+  function overlapsTraffic(v) {
+    const myHalf = halfLength(v);
+    for (const o of active) {
+      if (o === v || !o.group.visible) continue;
+      const dx = o.group.position.x - v.group.position.x;
+      const dz = o.group.position.z - v.group.position.z;
+      // Generous circular test: cheap, and spawning is not a hot path.
+      if (Math.hypot(dx, dz) < myHalf + halfLength(o) + FOLLOW_STOP_GAP) return true;
+    }
+    return false;
   }
 
   function setLateral(v) {
@@ -116,6 +192,69 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       void prevX;
       void prevZ;
     }
+  }
+
+  /** Half the body length of a vehicle, used for bumper-to-bumper maths. */
+  function halfLength(v) {
+    return (v.group.userData.length || (v.kind === 'car' ? 3.8 : 1.6)) / 2;
+  }
+
+  /**
+   * Bumper-to-bumper gap to the nearest vehicle ahead in the same lane, or
+   * Infinity if the road ahead is clear.
+   *
+   * Works in world space by projecting onto the vehicle's own heading rather
+   * than comparing `t` on a shared edge, so a queue still forms across a
+   * junction and round a bend, where the car in front is on a different edge.
+   * Oncoming traffic is naturally excluded: it sits on the other half of the
+   * carriageway, so its lateral offset is far outside the lane corridor.
+   */
+  function gapAhead(v) {
+    const hx = Math.sin(v.group.rotation.y);
+    const hz = Math.cos(v.group.rotation.y);
+    const myHalf = halfLength(v);
+    let best = Infinity;
+    for (const o of nearbyVehicles(v.group.position.x, v.group.position.z, FOLLOW_LOOKAHEAD)) {
+      if (o === v || !o.group.visible) continue;
+      const dx = o.group.position.x - v.group.position.x;
+      const dz = o.group.position.z - v.group.position.z;
+      const along = dx * hx + dz * hz;
+      if (along <= 0) continue;                                  // behind me
+      const across = Math.abs(dx * hz - dz * hx);
+      if (across > FOLLOW_LANE_HALF_WIDTH + halfWidthOf(o)) continue;  // another lane
+      const gap = along - myHalf - halfLength(o);
+      if (gap < best) best = gap;
+    }
+    return best;
+  }
+
+  function halfWidthOf(o) {
+    return o.kind === 'car' ? CAR_WIDTH / 2 : 0.4;
+  }
+
+  /**
+   * Speed ceiling implied by the vehicle in front: full speed with a clear
+   * road, easing linearly to a standstill as the gap closes.
+   */
+  function followSpeedCap(v, now) {
+    if (v.followCreepUntil && now < v.followCreepUntil) return v.baseSpeed * 0.35;
+    const gap = gapAhead(v);
+    if (gap === Infinity) {
+      v.followBlockedSince = 0;
+      return v.baseSpeed;
+    }
+    if (gap <= FOLLOW_STOP_GAP) {
+      if (!v.followBlockedSince) v.followBlockedSince = now;
+      else if (now - v.followBlockedSince > FOLLOW_STUCK_MS) {
+        v.followBlockedSince = 0;
+        v.followCreepUntil = now + FOLLOW_CREEP_MS;
+      }
+      return 0;
+    }
+    v.followBlockedSince = 0;
+    if (gap >= FOLLOW_SLOW_GAP) return v.baseSpeed;
+    const ratio = (gap - FOLLOW_STOP_GAP) / (FOLLOW_SLOW_GAP - FOLLOW_STOP_GAP);
+    return v.baseSpeed * ratio;
   }
 
   function bucketKey(x, z) {
@@ -219,6 +358,19 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
       }
     }
 
+    // Queue behind whatever is in front. Applied after the other speed rules so
+    // it can only ever slow a vehicle down, never speed one up past a junction
+    // limit or override a pedestrian yield. A vehicle already claiming priority
+    // through a crossing still has to stop for a solid car ahead of it.
+    const followCap = followSpeedCap(v, now);
+    if (v.speed > followCap) {
+      // Ease down rather than snapping, except at touching distance where the
+      // only acceptable speed is zero.
+      v.speed = followCap <= 0
+        ? 0
+        : v.speed + (followCap - v.speed) * Math.min(1, dt * 8);
+    }
+
     const previous = { edge: v.edge, forward: v.forward, t: v.t, lateral: v.lateral };
     const advanceDistance = v.speed * dt;
     v.t += advanceDistance;
@@ -268,6 +420,26 @@ export function createVehicles(scene, graph, rng, { maxCars = 14, maxBikes = 8 }
         v.yielding = yielding;
         v.speed += (0 - v.speed) * Math.min(1, dt * 9);
       }
+    }
+    // Following keeps a queue apart on open road, but a vehicle changing edges
+    // at a junction jumps sideways onto the new carriageway, and that jump can
+    // land it inside a car it was never behind. Same remedy as the pedestrian
+    // case above: refuse the step and hold position for a frame.
+    if (wouldOverlapTraffic(v, tmp.x, tmp.y, nextHeading)) {
+      if (!v.overlapBlockedSince) v.overlapBlockedSince = now;
+      if (now - v.overlapBlockedSince < OVERLAP_BLOCK_MS) {
+        v.edge = previous.edge;
+        v.forward = previous.forward;
+        v.t = previous.t;
+        v.lateral = previous.lateral;
+        v.speed += (0 - v.speed) * Math.min(1, dt * 9);
+      } else {
+        // Held too long: let it through and start the clock again, so a pair
+        // that has wedged together can unwind instead of parking permanently.
+        v.overlapBlockedSince = 0;
+      }
+    } else {
+      v.overlapBlockedSince = 0;
     }
     place(v);
     if (v.trafficYieldStartedAt) {

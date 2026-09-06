@@ -1,8 +1,41 @@
 import * as THREE from 'three';
 import { PALETTE as P, mat, roundedBox, box, sphere, mesh } from '../core/materials.js';
-import { LANDMARK_LOTS } from '../config/town.js';
+import { LANDMARK_LOTS, WORLD } from '../config/town.js';
 import { Occupancy } from '../world/scenery.js';
 import { CLIP, createCharacterModel } from '../world/characterModels.js';
+
+/**
+ * Backstop against walking off the world, at the edge of the flat terrain.
+ *
+ * Sized from the map, not guessed: the road graph reaches 128.1m from centre
+ * and the widest road is 8m, so legitimate sidewalk extends to roughly 134m.
+ * A first attempt at flatRadius - 6 (130m) cut straight through real pavement
+ * and pinned a walker against it for a whole run.
+ *
+ * This is insurance, not a fix for observed behaviour: across several 40s runs
+ * with 48 walkers, none ever left the map, because the network they follow is
+ * entirely inland.
+ */
+const WALKABLE_RADIUS = WORLD.flatRadius - 1;
+
+/**
+ * May a step from one point to another be taken?
+ *
+ * A one-way gate, deliberately. Simply rejecting every out-of-bounds position
+ * traps anyone who is already outside - each step is refused, so they can never
+ * get back in, which is precisely how the 130m version froze a walker. Moving
+ * further out is refused; moving back inward is always allowed.
+ *
+ * There is also no "snap to the nearest valid point" failsafe here, for the
+ * reason recorded in DESIGN_DECISIONS.md under "Reserved ground is rotated, and
+ * walkers can always escape it": a walker teleported to the closest legal point
+ * arrives instantly, is pushed again next frame, and ping-pongs forever.
+ */
+function stepWithinBounds(fromX, fromZ, toX, toZ) {
+  const to = toX * toX + toZ * toZ;
+  if (to <= WALKABLE_RADIUS * WALKABLE_RADIUS) return true;
+  return to < fromX * fromX + fromZ * fromZ;
+}
 
 /**
  * PEDESTRIANS
@@ -442,6 +475,7 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       && yieldToTraffic(p, dt)) {
       return false;
     }
+    if (!stepWithinBounds(p.group.position.x, p.group.position.z, tmp.x, tmp.y)) return false;
     clearTrafficYield(p);
     dirV.set(tmp.x - p.group.position.x, 0, tmp.y - p.group.position.z);
     p.group.position.x = tmp.x;
@@ -615,6 +649,12 @@ export function createPedestrians(scene, graph, rng, { max = 24, camera = null }
       rejoinNearestSidewalk(p, { turnAround: true });
       p.wasMoving = false;
       return false;
+    }
+    // Never step further off the map. Reporting "arrived" ends this leg so the
+    // walker picks a fresh inland destination instead of pressing outward.
+    if (!stepWithinBounds(p.group.position.x, p.group.position.z, nx, nz)) {
+      p.wasMoving = false;
+      return true;
     }
     p.group.position.x = nx;
     p.group.position.z = nz;

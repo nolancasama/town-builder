@@ -166,13 +166,16 @@ html, body {
    whose shape changed with the panel width. */
 #progress-icons {
   display: grid;
-  grid-template-columns: repeat(5, 26px);
-  gap: 5px; margin-top: 8px;
+  grid-template-columns: repeat(5, 39px);
+  gap: 6px; margin-top: 8px;
   justify-content: start;
 }
+/* 26px -> 39px: the built places are the thing worth looking at in this panel,
+   so the tiles grow 150% while the panel's padding and label stay as they were.
+   Five across is 219px, comfortably inside the panel. */
 .pip {
-  width: 26px; height: 26px; border-radius: 8px;
-  display: grid; place-items: center; font-size: 14px;
+  width: 39px; height: 39px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 21px;
   background: #e7edf2; filter: grayscale(1); opacity: 0.5;
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
               filter 0.4s ease, opacity 0.4s ease, background 0.4s ease;
@@ -433,7 +436,10 @@ html, body {
 }
 @media (max-width: 480px) {
   #progress-panel { padding: 8px 11px; }
-  #progress-icons { max-width: 170px; }
+  /* A max-width here fought the fixed five-column grid and clipped the last
+     tile. Narrow the tiles themselves instead so the row still reads as five. */
+  #progress-icons { grid-template-columns: repeat(5, 32px); gap: 5px; }
+  .pip { width: 32px; height: 32px; border-radius: 9px; font-size: 17px; }
   #target-card { padding: 8px 16px 12px; }
 }
 
@@ -466,6 +472,10 @@ html, body {
   display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
 }
 .choice-card {
+  /* The NEW badge is absolutely positioned against this. Without it the badge
+     resolved against the panel instead and floated free of its card - only the
+     .locked variant had ever declared a containing block. */
+  position: relative;
   flex: 1 1 0; min-width: 148px; max-width: 230px;
   border: none; cursor: pointer;
   font-family: var(--font);
@@ -729,12 +739,17 @@ html, body {
 }
 .choice-card.locked.nudge { animation: wobble 0.4s ease; }
 
+/* Anchored to its own card's top edge, riding just over it. Inset from the
+   corner rather than hung off it, because the Japanese label is wider than the
+   "NEW" it replaced. */
 .new-badge {
-  position: absolute; top: -8px; right: -6px;
+  position: absolute; top: -9px; right: 10px;
   background: var(--accent); color: #fff;
-  font-size: 10px; font-weight: 800; letter-spacing: 1px;
-  padding: 3px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 3px 9px; border-radius: 999px;
   box-shadow: 0 3px 8px rgba(226, 118, 27, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 #mystery-hint {
