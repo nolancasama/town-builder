@@ -219,3 +219,33 @@ teacher translating the interface. When a string is genuinely ambiguous, it
 stays English until its role is decided. Existing bilingual controls show the
 Japanese instruction as the primary line instead of repeating it under an
 English instruction.
+
+## 2026-09-06 - Cars pass through each other
+
+Ambient cars no longer treat one another as solid. Spacing is presentational
+only: a car eases off behind another, floored at 45% of its cruising speed, so
+it can never be brought to a stop by another car.
+
+This reverses the junction admission system added earlier the same day, and the
+reversal is the point. Traffic here is moving scenery, not gameplay. Making it
+collision-correct produced junction gridlock, and the machinery needed to
+resolve that - admission control, arrival-order fairness, forced winners, a
+recycle failsafe - amounted to a traffic simulation bolted onto a decoration.
+Even working, it still left cars stationary for up to ten seconds, which is what
+a child actually notices. Two cars briefly overlapping is a smaller visual
+problem than a car parked in a junction.
+
+Deadlock is now impossible by construction rather than by timeout: nothing in
+the car path can drive speed to zero.
+
+Measured over 240s at a 60fps timestep with 16 cars:
+
+                        hard blocking   junction admission   pass-through
+  distance driven       5,782m          14,091m              18,494m
+  stalls over 3s        584             113                  0
+  worst junction jam    228s            10s (capped)         0
+
+Retained: cars stay on the road graph (0 off-road frames), spawn spacing is
+still enforced, pedestrians still make cars yield (capped at 1800ms), and
+walkers are unaffected. The only remaining cause of a stopped car is a
+pedestrian crossing in front of it, which is behaviour worth keeping.

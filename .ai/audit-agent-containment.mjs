@@ -4,8 +4,12 @@
  *
  *   1. do pedestrians walk through buildings?      (reserved-rect penetration)
  *   2. do pedestrians leave the playable map?      (distance past flatRadius)
- *   3. do cars drive through each other?           (body overlap, same road)
+ *   3. do cars stay on the road network?           (distance to carriageway)
  *   4. do cars spawn on top of each other?         (overlap at t=0)
+ *
+ * Car-to-car overlap is reported for information only. Cars deliberately pass
+ * through one another - see DESIGN_DECISIONS.md - so a non-zero count here is
+ * expected behaviour, not a defect.
  *
  * Reads the live Occupancy rects, so "inside a building" means the same thing
  * the game's own placement code means by it.
@@ -181,6 +185,7 @@ await page.evaluate(() => {
 
   window.__probe = {
     frames: 0, buildings: boxes.length,
+    carOffRoad: 0, carOffRoadWorst: 0,
     pedInBuilding: 0, pedInBuildingWorst: 0,
     pedOffMap: 0, pedOffMapWorst: 0,
     carCarOverlapFrames: 0, carCarWorst: 0, minCarGap: Infinity,
@@ -213,6 +218,16 @@ await page.evaluate(() => {
     // of separation between two 3.8m cars, so it reports oncoming traffic
     // passing 3.5m apart in opposite lanes as a collision when the bodies are
     // nowhere near touching. Cars are 1.9m wide, so orientation matters.
+    for (const c of cars) {
+      // Cars ride the road graph; more than half a metre outside the
+      // carriageway would mean the path logic has gone wrong.
+      const d = g.world.graph.distanceToRoad(c.position.x, c.position.z);
+      if (d > 0.5) {
+        p.carOffRoad++;
+        if (d > p.carOffRoadWorst) p.carOffRoadWorst = d;
+      }
+    }
+
     for (let i = 0; i < cars.length; i++) {
       for (let j = i + 1; j < cars.length; j++) {
         const a = cars[i], b = cars[j];
@@ -238,6 +253,7 @@ const out = await page.evaluate(() => {
     pedInBuildingWorst: +p.pedInBuildingWorst.toFixed(2),
     pedOffMapWorst: +p.pedOffMapWorst.toFixed(2),
     carCarWorst: +p.carCarWorst.toFixed(2),
+    carOffRoadWorst: +p.carOffRoadWorst.toFixed(2),
   };
 });
 
@@ -248,7 +264,9 @@ console.log('--- 1. pedestrians inside building footprints ---');
 console.log('  agent-frames intruding:', out.pedInBuilding, ' worst depth:', out.pedInBuildingWorst, 'm');
 console.log('--- 3. pedestrians off the map ---');
 console.log('  agent-frames outside  :', out.pedOffMap, ' worst:', out.pedOffMapWorst, 'm');
-console.log('--- 2. car-car overlap ---');
+console.log('--- 3. cars off the road network ---');
+console.log('  car-frames off road   :', out.carOffRoad, ' worst:', (+out.carOffRoadWorst).toFixed(2), 'm');
+console.log('--- car-car overlap (informational: cars pass through by design) ---');
 console.log('  overlap frames        :', out.carCarOverlapFrames, ' worst:', out.carCarWorst, 'm');
 console.log('  closest gap seen      :', out.minCarGap, 'm');
 console.log('  spawn overlaps        :', spawnOverlaps.overlaps, ' worst:', spawnOverlaps.worstPenetration, 'm');

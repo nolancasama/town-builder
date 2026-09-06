@@ -17,17 +17,15 @@ const DURATION_MS = 45_000;
 const WALKER_RADIUS = 0.25;
 const CAR_WIDTH = 1.9;
 /**
- * Deadlock guard, not a comfort target.
+ * Deadlock guard for the one thing that can still stop a car: a pedestrian.
  *
- * Vehicles now hold at a junction stop line until admitted (see the junction
- * admission block in vehicles.js), so a legitimate wait is longer than it used
- * to be. The hard bound is no longer the yield timeout but STUCK_RECYCLE_MS:
- * any vehicle with no progress for 10s is recycled elsewhere on the network, so
- * nothing can be stationary indefinitely. This sits just above that bound, with
- * room for the ~250ms sampling step under SwiftShader, and so still catches a
- * genuine deadlock - which would be unbounded, not merely long.
+ * Cars no longer block each other at all, so a car-caused stall is impossible
+ * by construction - the spacing rule is floored above zero. What remains is the
+ * pedestrian yield, which is itself capped at MAX_TRAFFIC_YIELD_MS (1800ms)
+ * before the vehicle claims priority. This threshold allows that plus
+ * deceleration and the ~250ms sampling step under SwiftShader.
  */
-const MAX_STATIONARY_MS = 11_000;
+const MAX_STATIONARY_MS = 5_000;
 const MIME = {
   '.html': 'text/html',
   '.js': 'text/javascript',
