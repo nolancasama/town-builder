@@ -231,7 +231,7 @@ export function makeHouse(rng) {
   // A rear service door, meter and downpipe make the secondary elevations read
   // as intentional without turning every small house into dozens of meshes.
   g.add(mesh(box(0.85, 1.8, 0.12), doorMat, {
-    x: w * 0.2, y: 0.9, z: -d / 2 - 0.03, cast: false,
+    x: 0, y: 0.9, z: -d / 2 - 0.03, cast: false,
   }));
   g.add(mesh(box(0.45, 0.7, 0.18), mat(P.metal), {
     x: w / 2 + 0.1, y: 1.15, z: d * 0.25, cast: false,

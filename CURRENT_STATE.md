@@ -127,30 +127,43 @@ He gives one `We have a stadium in Matsubara.` example but **no building is
 constructed** during the scene. He is removed before any lot can be claimed,
 and never drives gameplay again. `?skipIntro=1` bypasses it for testing.
 
-**Sidewalks and traffic.** Each road's walk retreats from a junction by however
-far it takes to actually clear the crossing carriageway, measured rather than
-derived from a width formula - at an acute junction the laterally-offset strip
-stays near the crossing road far along the edge, which had left two walks lying
-across a street. A stub swallowed by its own junctions gets no walk at all.
-Sidewalks exist along roads, plus a paved
-**frontage** between a built landmark and the road — the perimeter ring that
-used to surround developed plots is gone, and the other three sides stay open
-ground. Undeveloped lots keep plain gravel/dirt dressing; the frontage is added
-when construction settles and removed on Play Again. Landmarks address the
-street directly: each lot's `rot` is the bearing of the road it faces rather
-than a right angle, so buildings sit **parallel** to their street (0 degrees off
-across all 17, previously up to 17 out on the diagonal country lanes), and
-their front face is **flush** with the pavement - zero gap on 15 of 17.
+**Sidewalks and traffic.** Sidewalk and kerb geometry is **baked**, not solved
+at runtime. `scripts/bake-sidewalks.mjs` (`npm run bake:sidewalks`) generates it
+once from the hand-authored `ROAD_SEGMENTS` and commits it to
+`src/config/sidewalks.js` as plain, hand-editable polygon data (1258 walk and
+769 kerb polygons, 5693 top triangles); `createRoads` only draws it. Corners are
+analytic offset-line miters, bevelled when an acute angle spikes them, clipped
+against every carriageway. A `SIDEWALK_SOURCE_HASH` guard reports a mismatch and
+names the rebake command if roads move without one, so committed geometry cannot
+silently go stale.
+
+This replaced a runtime clearance solver that retreated each walk from its
+junctions and left the pavement broken at every one of them (155 of 164 walk
+ends short, 334.8 units missing). An attempt to close those corners with
+radially-sampled ribbons failed three ways - chords cutting across a carriageway,
+per-quad boxes z-fighting into visible combs, 9 corners never emitted - and was
+reverted in favour of baking. Pavement is now continuous around corners
+(verified 76/76 corner midpoints on pavement, plus junction captures) with zero
+carriageway intrusions. Lot aprons sit 6mm proud so they cannot z-fight the
+pavement they now overlap.
+
+Sidewalks exist along roads, plus a paved **frontage** between a built landmark
+and the road - the perimeter ring that used to surround developed plots is gone,
+and the other three sides stay open ground. Undeveloped lots keep plain
+gravel/dirt dressing; the frontage is added when construction settles and removed
+on Play Again. Landmarks address the street directly: each lot's `rot` is the
+bearing of the road it faces rather than a right angle, so buildings sit
+**parallel** to their street (0 degrees off across all 17), and their front face
+is **flush** with the pavement - zero gap on 15 of 17.
 
 Two lots keep a setback for stated reasons. `large-station` is the only plot
-whose position also places infrastructure (`railwayWorldX()` derives the
-viaduct from it), and pulling it to the kerb drags the elevated line three
-metres west over its neighbour, so it keeps a 3-unit forecourt.
-`medium-northeast` is boxed in by a diagonal lane, a second road and the
-viaduct; 4 units is the smallest setback that clears all three.
-Pedestrians route along roads/entrance spurs/lot perimeters instead of
-cutting across building footprints, and pedestrians and vehicles now yield to
-each other near crossings.
+whose position also places infrastructure (`railwayWorldX()` derives the viaduct
+from it), and pulling it to the kerb drags the elevated line three metres west
+over its neighbour, so it keeps a 3-unit forecourt. `medium-northeast` is boxed
+in by a diagonal lane, a second road and the viaduct; 4 units is the smallest
+setback that clears all three. Pedestrians route along roads/entrance
+spurs/lot perimeters instead of cutting across building footprints, and
+pedestrians and vehicles now yield to each other near crossings.
 
 **Railway.** The elevated line runs the full width of the map on a varying
 height profile (6.2 at the map edges, ~11 through town, 17.2 only over the
@@ -225,6 +238,15 @@ agent's per-frame displacement against that agent's own speed.
   in place (four draw calls for all roads, instanced trees, pooled/capped
   skinned agents, mixer distance throttling, capped pixel ratio, one automatic
   quality drop), with only synthetic headless timing available so far.
+- **`npm run audit:sidewalks` exits 1 on 13 false failures.** Its corner test
+  treats every angularly adjacent pair of roads as a corner needing pavement
+  connectivity, including pairs with another carriageway between them - which
+  can only be joined by paving across a road, correctly forbidden. Two genuine
+  sampling bugs in it were fixed (50 -> 16 -> 13 reported failures); the
+  remaining ones need the corner *definition* narrowed, not more tuning. The
+  pavement itself is verified continuous by `.ai/probe-corners.mjs` (76/76) and
+  by junction captures. The deploy workflow does not run this check.
+
 - **Speech recognition needs Chrome/Edge and an internet connection.** Firefox
   and Safari fall back to typing.
 

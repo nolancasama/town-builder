@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { PALETTE as P, mat } from '../core/materials.js';
+import { ROAD_SEGMENTS, ROAD_WIDTH } from '../config/town.js';
+import { KERB_POLYGONS, SIDEWALK_SOURCE_HASH, WALK_POLYGONS } from '../config/sidewalks.js';
 
 /**
  * ROADS
@@ -17,6 +19,27 @@ import { PALETTE as P, mat } from '../core/materials.js';
 export const SIDEWALK_BY_CLASS = { main: 2.6, minor: 2.2, lane: 1.6 };
 const ROAD_TOP = 0.14;
 const WALK_TOP = 0.28;
+/** Lift for lot aprons so they never share the pavement's exact plane. */
+const FRONTAGE_LIFT = 0.006;
+
+function sourceHash() {
+  const source = JSON.stringify({ ROAD_SEGMENTS, ROAD_WIDTH });
+  let hash = 0xcbf29ce484222325n;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= BigInt(source.charCodeAt(i));
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, '0');
+}
+
+const currentSidewalkSourceHash = sourceHash();
+const sidewalkBakeIsStale = currentSidewalkSourceHash !== SIDEWALK_SOURCE_HASH;
+if (sidewalkBakeIsStale) {
+  console.error(
+    `Baked sidewalk data is stale (${SIDEWALK_SOURCE_HASH} != ${currentSidewalkSourceHash}). `
+    + 'Run npm run bake:sidewalks and commit src/config/sidewalks.js.'
+  );
+}
 
 function slab(list, w, h, d, x, y, z, angle) {
   const g = new THREE.BoxGeometry(w, h, d);
@@ -30,18 +53,6 @@ function disc(list, radius, h, x, y, z) {
   list.push(g);
 }
 
-/** Distance from a point to a road edge's centreline segment. */
-function distanceToEdge(px, pz, e) {
-  const ax = e.a.pos.x;
-  const az = e.a.pos.y;
-  const dx = e.b.pos.x - ax;
-  const dz = e.b.pos.y - az;
-  const l2 = dx * dx + dz * dz;
-  let t = l2 ? ((px - ax) * dx + (pz - az) * dz) / l2 : 0;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
-}
-
 function mergeInto(scene, list, material, name, receive = true) {
   if (!list.length) return null;
   const merged = mergeGeometries(list, false);
@@ -52,6 +63,68 @@ function mergeInto(scene, list, material, name, receive = true) {
   mesh.name = name;
   scene.add(mesh);
   return mesh;
+}
+
+function bakedPrisms(polygons, height) {
+  const positions = [];
+  const indices = [];
+  const edgeCounts = new Map();
+  const edgeKey = (a, b) => {
+    const aKey = `${a[0]},${a[1]}`;
+    const bKey = `${b[0]},${b[1]}`;
+    return aKey < bKey ? `${aKey}|${bKey}` : `${bKey}|${aKey}`;
+  };
+
+  for (const polygon of polygons) {
+    for (let i = 0; i < polygon.length; i++) {
+      const key = edgeKey(polygon[i], polygon[(i + 1) % polygon.length]);
+      edgeCounts.set(key, (edgeCounts.get(key) || 0) + 1);
+    }
+  }
+
+  for (const sourcePolygon of polygons) {
+    const polygon = sourcePolygon.slice();
+    const contour = polygon.map(([x, z]) => new THREE.Vector2(x, z));
+    if (!THREE.ShapeUtils.isClockWise(contour)) {
+      polygon.reverse();
+      contour.reverse();
+    }
+    const topStart = positions.length / 3;
+    for (const [x, z] of polygon) positions.push(x, height, z);
+    for (const face of THREE.ShapeUtils.triangulateShape(contour, [])) {
+      let [a, b, c] = face;
+      const pa = polygon[a];
+      const pb = polygon[b];
+      const pc = polygon[c];
+      const twiceArea = (pb[0] - pa[0]) * (pc[1] - pa[1])
+        - (pb[1] - pa[1]) * (pc[0] - pa[0]);
+      if (twiceArea > 0) [b, c] = [c, b];
+      indices.push(topStart + a, topStart + b, topStart + c);
+    }
+
+    for (let i = 0; i < polygon.length; i++) {
+      const a = polygon[i];
+      const b = polygon[(i + 1) % polygon.length];
+      if ((edgeCounts.get(edgeKey(a, b)) || 0) > 1) continue;
+      const wallStart = positions.length / 3;
+      positions.push(
+        a[0], 0, a[1],
+        b[0], 0, b[1],
+        b[0], height, b[1],
+        a[0], height, a[1]
+      );
+      indices.push(
+        wallStart, wallStart + 1, wallStart + 2,
+        wallStart, wallStart + 2, wallStart + 3
+      );
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function frontagePrism(points, height) {
@@ -197,6 +270,15 @@ export function createRoads(scene, graph) {
   const kerb = [];
   const paint = [];
 
+  scene.userData.sidewalkBake = {
+    sourceHash: SIDEWALK_SOURCE_HASH,
+    currentHash: currentSidewalkSourceHash,
+    stale: sidewalkBakeIsStale,
+  };
+  if (sidewalkBakeIsStale) throw new Error('Refusing to draw stale baked sidewalks; run npm run bake:sidewalks.');
+  walk.push(bakedPrisms(WALK_POLYGONS, WALK_TOP));
+  kerb.push(bakedPrisms(KERB_POLYGONS, WALK_TOP + 0.03));
+
   for (const e of graph.edges) {
     const cx = (e.a.pos.x + e.b.pos.x) / 2;
     const cz = (e.a.pos.y + e.b.pos.y) / 2;
@@ -207,54 +289,19 @@ export function createRoads(scene, graph) {
     // carriageway, over-long so junction corners fill in
     slab(asphalt, w, ROAD_TOP + 0.4, len + w, cx, (ROAD_TOP - 0.4) / 2, cz, angle);
 
-    // Sidewalk + kerb strips down each side, retreating from each junction by
-    // enough to clear the widest road meeting there. Trimming by a fraction of
-    // this edge's own length (the previous rule) left short edges' walks lying
-    // across the crossing carriageway.
-    const SIDEWALK_W = SIDEWALK_BY_CLASS[e.cls] || 2.2;
-    // Find where each side's walk can actually start and stop. A width-based
-    // trim is not enough: at an acute junction the laterally-offset strip stays
-    // near the crossing road far along the edge, which is how walks ended up
-    // lying across a street. Test the real clearance instead.
-    const walkOff = w / 2 + SIDEWALK_W / 2;
-    const clearAt = (along, side) => {
-      const ox = e.right.x * side;
-      const oz = e.right.y * side;
-      for (const v of [-0.5, 0, 0.5]) {
-        const lat = walkOff + SIDEWALK_W * v;
-        const px = e.a.pos.x + e.dir.x * along + ox * lat;
-        const pz = e.a.pos.y + e.dir.y * along + oz * lat;
-        for (const other of graph.edges) {
-          if (other === e) continue;
-          if (distanceToEdge(px, pz, other) < other.width / 2 + 0.3) return false;
-        }
-      }
-      return true;
-    };
-
+    // The baked pavement owns the junction geometry. Road-edge paint retains a
+    // small deterministic junction margin without reintroducing a solver.
+    const startTrim = Math.max(...e.a.edges.map((edge) => edge.width)) / 2 + 0.3;
+    const endTrim = Math.max(...e.b.edges.map((edge) => edge.width)) / 2 + 0.3;
+    const edgeLineLength = Math.max(0, len - startTrim - endTrim);
     for (const side of [-1, 1]) {
-      const step = 0.25;
-      let startAlong = 0;
-      while (startAlong < len && !clearAt(startAlong, side)) startAlong += step;
-      let endAlong = len;
-      while (endAlong > startAlong && !clearAt(endAlong, side)) endAlong -= step;
-      const walkLen = endAlong - startAlong;
-      // A stub swallowed by its own junctions gets no walk, rather than one
-      // laid across the road.
-      if (walkLen < 1.5) continue;
-
-      const midAlong = (startAlong + endAlong) / 2;
+      if (edgeLineLength < 1.5) continue;
+      const midAlong = startTrim + edgeLineLength / 2;
       const mx = e.a.pos.x + e.dir.x * midAlong;
       const mz = e.a.pos.y + e.dir.y * midAlong;
-      const ox = e.right.x * side;
-      const oz = e.right.y * side;
-      slab(walk, SIDEWALK_W, WALK_TOP, walkLen, mx + ox * walkOff, WALK_TOP / 2, mz + oz * walkOff, angle);
-      const kerbOff = w / 2 + 0.16;
-      slab(kerb, 0.32, WALK_TOP + 0.03, walkLen, mx + ox * kerbOff, (WALK_TOP + 0.03) / 2, mz + oz * kerbOff, angle);
-      // edge line follows the same span so the markings stop where the walk does
       const lx = e.right.x * side * (w / 2 - 0.5);
       const lz = e.right.y * side * (w / 2 - 0.5);
-      slab(paint, 0.14, 0.06, walkLen, mx + lx, ROAD_TOP + 0.01, mz + lz, angle);
+      slab(paint, 0.14, 0.06, edgeLineLength, mx + lx, ROAD_TOP + 0.01, mz + lz, angle);
     }
 
     // centre line: dashes on the main roads only
@@ -312,12 +359,16 @@ export function createRoads(scene, graph) {
 export function createLotSidewalk(scene, graph, lot) {
   const points = lotFrontagePoints(lot, graph);
   if (!points) return null;
+  // The baked pavement now runs all the way to the kerb line, so a frontage
+  // laid at exactly WALK_TOP shares its plane and z-fights against it - on
+  // some lots across the whole apron. Sit the apron a hair proud instead: it
+  // is the same material, so the lip is invisible, and the depth tie is gone.
   const geometry = frontagePrism([
     points.buildingLeft,
     points.buildingRight,
     points.roadRight,
     points.roadLeft,
-  ], WALK_TOP);
+  ], WALK_TOP + FRONTAGE_LIFT);
   const frontage = new THREE.Mesh(geometry, mat(P.sidewalk));
   frontage.name = `lot-frontage:${lot.id}`;
   frontage.castShadow = false;

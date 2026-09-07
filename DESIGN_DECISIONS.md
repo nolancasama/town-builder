@@ -135,6 +135,20 @@ Models are scaled at spawn to the same 5-7.5 m width the procedural houses used,
 so scenery spacing, placement collision and the reserved-ground bookkeeping are
 all unchanged.
 
+## 2026-09-07 - Sidewalk geometry is baked for the authored road layout
+
+Sidewalk and kerb polygons are generated once from the hand-authored road
+network and committed as readable coordinate data. The layout is fixed during
+play, while the runtime clearance solver repeatedly produced missing or ridged
+junction pavement; paying that complexity at load could not improve a network
+that never changes.
+
+The bake uses analytic offset-line miters, bevels excessive outer spikes, and
+clips the result against every carriageway. Runtime code now only validates the
+source hash and builds the static polygon prisms. If road segments or widths
+change without a rebake, the hash guard reports the mismatch and names
+`npm run bake:sidewalks` instead of silently drawing stale pavement.
+
 ## 2026-09-06 - Procedural buildings use a four-sided toy-town kit
 
 The suburban GLB experiment was removed and the ambient streetscape is
@@ -249,3 +263,23 @@ Retained: cars stay on the road graph (0 off-road frames), spawn spacing is
 still enforced, pedestrians still make cars yield (capped at 1800ms), and
 walkers are unaffected. The only remaining cause of a stopped car is a
 pedestrian crossing in front of it, which is behaviour worth keeping.
+
+## 2026-09-07 - Lot aprons sit 6mm proud of the pavement
+
+The paved frontage added when a landmark is built used to be laid at exactly
+`WALK_TOP`, the same plane as the sidewalk. That was harmless while walks
+retreated from their junctions, but baked pavement runs to the kerb line and now
+reaches under the aprons: 24 of 68 apron corners fell inside a pavement polygon,
+and on `medium-center-south` the whole apron did. Two coplanar surfaces at one
+depth flicker against each other.
+
+Rather than clip the apron against the pavement - which would have to be redone
+whenever either changes - the apron is lifted by `FRONTAGE_LIFT` (0.006). It is
+the same material, so the lip is invisible at any gameplay distance, and the
+depth comparison is decisive. Verified: every overlapping apron vertex now sits
+at 0.286, none coplanar with the pavement.
+
+The bake also gained a final `sanitize()` pass. `splitSharedEdges` inserts
+T-junction vertices after the polygons were last cleaned, which left 187 walk
+and 26 kerb polygons carrying exact duplicate neighbours that triangulate into
+degenerate faces. Both are now zero.

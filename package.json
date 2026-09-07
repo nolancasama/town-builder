@@ -6,8 +6,10 @@
   "description": "Speak English, build a town. A 3D ESL town-building game for elementary classrooms.",
   "scripts": {
     "dev": "vite",
+    "bake:sidewalks": "node scripts/bake-sidewalks.mjs",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "audit:sidewalks": "node .ai/audit-sidewalk-gaps.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

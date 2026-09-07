@@ -1,61 +1,45 @@
 {
-  "task": "Visually upgrade the town's buildings in the 3D ESL town-builder so the streets read as a charming toy Japanese town rather than coloured boxes. The generic houses and shops are the priority; the hand-built landmarks get a lighter consistency pass.",
-  "notes": [
-    "PROJECT: Vite + three.js, no framework. A 3D town an elementary-school class builds by speaking English. Art direction is deliberately 'toy town': chunky low-poly shapes, flat cheerful colours, MeshLambertMaterial under a hemisphere + directional light. That direction is correct and must be preserved - this task is about adding CHARM AND DETAIL within it, not changing the style, not going realistic, not adding PBR/textures.",
-    "CURRENT SURVEY SCREENSHOTS are in qa-evidence/survey/*.png (town-overview, houses-street, houses-close, shops-street, landmark-school, landmark-bakery, landmark-hospital, landmark-library, landmark-station, landmark-park). Look at them first - they are the evidence behind every fault listed below. Regenerate them any time with: npm run dev -- --port 5199, then node .ai/capture-building-survey.mjs 5199 qa-evidence/survey",
-    "FAULT 1 - houses and shops are detailed on ONE face only. makeHouse() in src/world/props.js puts its windows and door on the +z face and nothing anywhere else, so from the other three sides every house is a blank cube. In qa-evidence/survey/houses-close.png a house fills half the frame as one featureless tan wall. The town camera orbits freely, so every facade is seen.",
-    "FAULT 2 - the wall palette collapses to beige. HOUSE_WALLS offers six colours but the town reads as an unbroken field of sand/cream (see town-overview.png); only the roofs carry colour. Houses should be individually recognisable from the air.",
-    "FAULT 3 - buildings have no ground contact. They meet the grass at a hard edge with no plinth, foundation, path to the door, step, hedge, gate or planting, so they look pasted onto the lawn rather than built on it.",
-    "FAULT 4 - roofs are bare prisms. The gable/hip roofs have no ridge cap, no fascia band and no eave overhang detail, so the roofline is a flat silhouette.",
-    "FAULT 5 - shops are a single flat storey: box + coloured band + glass strip + awning, with no door, no upper-floor windows, no vertical Japanese-style sign, and no street clutter (crates, a parked bike, planters, an A-board). The coloured roof band reads as a solid saturated plate (see the purple RAMEN roof in town-overview.png).",
-    "FAULT 6 - a faint diagonal cross-hatch striping is visible across large flat walls built from roundedBox(); it is the RoundedBoxGeometry triangulation catching the Lambert light on big panels. Visible on the tan wall in houses-close.png. Fix or avoid it on large surfaces.",
-    "THE LANDMARKS (src/buildings/procedural.js and src/buildings/extras.js) are already hand-tuned and mostly good - the school and hospital have storey bands, window grids, signage and canopies. Do NOT redesign them. Give them only a light consistency pass so they share whatever new ground-contact and roofline language the houses and shops get, and fix anything that is clearly broken or bare on a face.",
-    "PERFORMANCE IS A HARD CONSTRAINT: this runs on Japanese elementary-school Chromebooks with integrated GPUs. src/core/materials.js caches every material and geometry precisely so the renderer can batch. Reuse mat()/box()/roundedBox()/cylinder() from that module; do not create per-instance materials, do not switch to MeshStandardMaterial, and keep the added mesh count per building modest. The town builds ~45 houses plus shops at once.",
-    "Record the visual direction you settle on in DESIGN_DECISIONS.md and update CURRENT_STATE.md.",
-    "Read DESIGN_DECISIONS.md before changing the look - it carries the existing art-direction rationale, and recording this pass's decision there is part of the task.",
-    "After you have settled the visual approach, you may delegate bounded mechanical sub-work to a lower-cost worker rather than doing it yourself. Write a work order as JSON (task, requirements, constraints, startingPoints, validation, plus complexity / bounded / exploration / risk / expectedCost) and run: node ~/.claude/workers/bin/delegate.js <order.json> --controller codex --json. The router decides whether a cheaper worker is available and affordable; if it routes back to you, just do the work. Inspect the resulting diff and validation output yourself before continuing. Keep the visual judgment, the shared material/geometry design and anything coupled in your own hands. Never call another worker directly; the router is the only path down."
-  ],
+  "task": "Replace the runtime sidewalk solver with baked, committed sidewalk polygon data generated once from the hand-authored road network",
+  "context": "Matsubara Town's road network is hand-authored constant data: ROAD_SEGMENTS in src/config/town.js is a literal array of 41 segments, and it never changes at runtime. The sidewalk geometry is therefore a pure function of a constant, but createRoads() currently re-derives it on every load with an O(edges^2) clearance search that retreats each walk from its junctions. That solver leaves the pavement broken at every junction: 155 of 164 walk ends stop short, 334.8 units of pavement missing, worst gap 13.75. An attempt to close the corners with radially-sampled ribbons failed three ways (chords cutting across a carriageway, per-quad boxes z-fighting into visible combs, 9 of 82 corners never emitted) and has been reverted. The decision is to stop solving a fixed layout at runtime and bake the geometry instead.",
   "requirements": [
-    "Every generic house and shop looks finished from all four sides - windows, and where sensible a door, balcony, vent, downpipe, meter box or utility detail, on more than the front face. No blank walls at street scale.",
-    "Houses read as individually distinct in a street and from the overhead view: wall colour actually varies across the palette instead of collapsing to beige, and silhouettes vary (storeys, roof type, porch/entry, small annexe or garage).",
-    "Buildings sit convincingly on the ground: a plinth/foundation edge, and an approach - path, step, low wall, hedge or planting - between the building and the grass.",
-    "Rooflines carry detail: an eave/fascia band, a ridge cap or equivalent, so the roof is not a single untextured prism.",
-    "Shops gain depth: an actual entrance, a second storey or parapet where the height allows, a vertical or projecting sign in the Japanese shopping-street idiom, and a little street-level clutter so the shop front feels inhabited.",
-    "The diagonal shading striping on large roundedBox walls is gone.",
-    "Landmarks in src/buildings/ share the new ground-contact and roofline language without being redesigned.",
-    "Style unchanged: chunky low-poly toy town, flat cheerful colours, MeshLambertMaterial. Nothing photoreal, no imported models, no new texture assets.",
-    "makeHouse(rng) and makeShop(rng, label) keep their existing signatures and keep setting userData.footprint, which scenery placement and collision depend on."
+    "Add scripts/bake-sidewalks.mjs which imports ROAD_SEGMENTS and ROAD_WIDTH from src/config/town.js, builds the road graph the same way src/world/graph.js does, computes the complete sidewalk and kerb geometry, and writes src/config/sidewalks.js. Add an npm script `bake:sidewalks` for it.",
+    "Compute each corner ANALYTICALLY as a miter joint between two offset strips, not by sampling. A road's kerb line is its centreline offset by width/2; its outer line is offset by width/2 + sidewalk width. For a pair of angularly adjacent edges at a node, the corner fill is the polygon bounded by both kerb lines and both outer lines; each straight strip runs up to the neighbouring road's kerb line. Bevel the outer vertex when an acute angle makes the miter spike longer than 3x the sidewalk width.",
+    "Every emitted polygon must be clear of EVERY carriageway, including roads not incident to the node it sits at - clip against those too. A stub edge swallowed by its junctions must still end up with continuous pavement across it.",
+    "src/config/sidewalks.js must be plain committed data a person can read and hand-edit, in exactly this frozen format: `export const SIDEWALK_SOURCE_HASH = '<hex>';` (a hash over ROAD_SEGMENTS and ROAD_WIDTH), `export const WALK_POLYGONS = [ [[x,z],[x,z],...], ... ];` and `export const KERB_POLYGONS = [ [[x,z],...], ... ];`. Coordinates rounded to 3 decimals, one polygon per line, so the file diffs cleanly in git.",
+    "createRoads() in src/world/roads.js must draw the sidewalks and kerbs from that committed data only. Delete the runtime clearance search, the retreat loop and the per-edge walk/kerb slab emission it feeds. Carriageways, the junction asphalt discs, zebra crossings, centre lines and createLotSidewalk() stay exactly as they are.",
+    "Build each polygon as ONE extruded prism - a single top face at the existing WALK_TOP (kerbs at WALK_TOP + 0.03) with vertical faces only around its outer perimeter. No internal faces between neighbouring pieces: coincident coplanar faces are what produced the z-fighting combs last time.",
+    "Add a staleness guard: at load, hash ROAD_SEGMENTS and ROAD_WIDTH the same way the bake script does and compare against SIDEWALK_SOURCE_HASH. On mismatch, log a clear console error naming the `npm run bake:sidewalks` fix. It must fail loudly rather than silently drawing stale pavement.",
+    "Update .ai/audit-sidewalk-gaps.mjs to audit the baked result: it must report 0 unpaved corners of 82, 0 carriageway intrusions, and 0 hash staleness, and exit non-zero if any of those fail."
   ],
   "constraints": [
-    "Do not reintroduce the Kenney suburban .glb houses. src/world/houseModels.js and public/assets/buildings/ were deliberately deleted this session; houses are procedural again on purpose.",
-    "Do not create per-building materials or geometries - go through the caches in src/core/materials.js.",
-    "Do not switch away from MeshLambertMaterial or add MeshStandardMaterial/PBR.",
-    "Do not add downloaded 3D models, image textures or new asset files.",
-    "Do not change town layout, lot positions, the road graph, pedestrian or vehicle systems, or src/config/town.js.",
-    "Do not grow a building's footprint beyond what makeHouse/makeShop already produce - lots and sidewalk clearance were tuned by hand and buildings must not spill onto the sidewalk.",
-    "Do not touch src/world/characterModels.js, src/world/characters.js or src/systems/pedestrians.js.",
-    "Keep the per-frame cost flat: no new per-frame CPU work, no new lights, no shadow-map changes."
+    "Do not touch pedestrian routing (systems/pedestrians.js), the road graph (world/graph.js), vehicles, landmarks, or lot code. src/config/town.js is READ-ONLY - do not edit the road network to make the geometry easier.",
+    "No pavement may lie on a carriageway at any point along a polygon edge, not merely at its vertices. This is the regression the old retreat rule existed to prevent.",
+    "The painted zebra crossings on junction approaches (at maxW/2 + 1.8 from the node) must stay visible on asphalt - pavement must not cover them.",
+    "Draw calls must not increase: everything still merges via mergeInto() into the existing 'sidewalks' and 'kerbs' meshes. No per-frame work is added - the runtime only reads data and builds static geometry once.",
+    "Keep the total triangle count for sidewalks and kerbs in the same order as before; an analytic miter should need far fewer triangles than the reverted sampled version.",
+    "Do not inline code into shell commands (no `node -e`). Use the declared npm scripts.",
+    "Record the decision in DESIGN_DECISIONS.md: baked committed geometry replacing a runtime solver for a fixed hand-authored layout, why (the solver kept producing junction defects on a layout that never changes), and the staleness guard that makes hard-coded data safe."
   ],
   "startingPoints": [
-    "src/world/props.js",
-    "src/core/materials.js",
-    "src/world/scenery.js",
-    "src/buildings/procedural.js",
-    "src/buildings/extras.js",
-    "qa-evidence/survey/",
-    ".ai/capture-building-survey.mjs"
+    "src/world/roads.js",
+    "src/world/graph.js",
+    "src/config/town.js",
+    ".ai/audit-sidewalk-gaps.mjs",
+    "DESIGN_DECISIONS.md"
   ],
   "validation": [
+    "npm run bake:sidewalks",
     "npm run build",
-    "npm run dev -- --port 5199 then node .ai/capture-building-survey.mjs 5199 qa-evidence/survey-after - capture the same ten shots after the change and compare them against qa-evidence/survey/",
-    "node .ai/audit-landmark-extents.mjs http://localhost:5199 - no landmark may newly spill past its plot",
-    "Zero page errors in the capture run (the harness prints the count)"
+    "npm run audit:sidewalks"
   ],
-  "category": "3d-visual",
+  "notes": "The audit needs a preview server: `npm run build`, then `npx vite preview --port 4177 --strictPort` in the background, then `npm run audit:sidewalks`. It drives the live game with Playwright against Chrome at 'C:/Program Files/Google/Chrome/Application/chrome.exe' and reads window.game.world.graph under ?dev=1. Current audit baseline on the reverted code: unpavedCornerCount 9 of 82 was the best the sampled attempt reached; the straight-run metrics gapCount 155 / totalMissingMetres 334.8 describe the retreat and are expected to become meaningless once walks run to the kerb lines - replace them with the corner/intrusion/staleness checks rather than preserving them. Also re-run `node .ai/verify-pedestrian-flow.mjs dist` and confirm it still passes. Capture a fresh top-down to qa-evidence/sidewalk-baked-topdown.png: corners must read as smooth flat pavement with no ridges, combs or stripes.",
+  "category": "3d-geometry",
   "complexity": "hard",
-  "bounded": false,
+  "bounded": true,
   "exploration": "local",
-  "risk": "medium",
-  "expectedCost": "large",
-  "executionStyle": "deep-reasoning"
+  "risk": "high",
+  "expectedCost": "medium",
+  "executionStyle": "deep-reasoning",
+  "composition": "atomic",
+  "priorFailure": "approach"
 }
