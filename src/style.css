@@ -556,11 +556,19 @@ html, body {
   padding: 5px 12px; border-radius: 999px;
 }
 
+/* Mirrors #mic-row: the mic used to be pulled up over the tour card via a
+   negative margin, which covered the sentence pattern the child is reading.
+   It now sits below it with the same breathing room as the first speaking
+   phase, and Skip is absolutely positioned beside it so it stays out of the
+   flex flow and can't pull the mic off-center. */
 #tour-controls {
-  margin-top: -22px;
-  display: flex; align-items: center; gap: 16px;
+  margin-top: 14px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
 }
 .skip-btn {
+  position: absolute; left: calc(50% + 60px);
   font-family: var(--font); font-weight: 800; font-size: 15px;
   padding: 11px 20px 9px; border-radius: 999px; border: none; cursor: pointer;
   background: var(--paper); color: var(--ink-soft);
@@ -659,6 +667,8 @@ html, body {
 @media (max-height: 620px) {
   #tour-card { padding: 9px 18px 12px; }
   #tour-frame { font-size: 19px; }
+  #tour-controls { margin-top: 9px; }
+  .skip-btn { left: calc(50% + 50px); }
 }
 
 /* ---------------- Guided tour (phase 3) ---------------- */
