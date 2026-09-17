@@ -247,8 +247,10 @@ export function createPortrait({ rng, spec }) {
     },
 
     dispose() {
+      backdrop.material.map.dispose();
       backdrop.geometry.dispose();
       backdrop.material.dispose();
+      scene.clear();
     },
   };
 }

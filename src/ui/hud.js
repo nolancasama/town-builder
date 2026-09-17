@@ -70,6 +70,9 @@ export function createHUD(handlers = {}) {
     summaryScore: $('summary-score'),
     btnContinue: $('btn-continue'),
     btnFinish: $('btn-finish'),
+    guideChoice: $('guide-choice'),
+    btnGuideMale: $('btn-guide-male'),
+    btnGuideFemale: $('btn-guide-female'),
     settingsBtn: $('settings-btn'),
     settingsPanel: $('settings-panel'),
     btnResetUnlocks: $('btn-reset-unlocks'),
@@ -130,6 +133,25 @@ export function createHUD(handlers = {}) {
   el.btnEndExplore.addEventListener('click', () => handlers.onExplore && handlers.onExplore());
   el.btnEndAgain.addEventListener('click', () => handlers.onPlayAgain && handlers.onPlayAgain());
   el.tourExit.addEventListener('click', () => handlers.onTourExit && handlers.onTourExit());
+
+  let guideChoiceResolve = null;
+  let guideChoiceHideTimer = null;
+  let guideChoiceShowFrame = null;
+
+  function settleGuideChoice(gender = null) {
+    cancelAnimationFrame(guideChoiceShowFrame);
+    guideChoiceShowFrame = null;
+    el.guideChoice.classList.remove('show');
+    clearTimeout(guideChoiceHideTimer);
+    guideChoiceHideTimer = setTimeout(() => el.guideChoice.classList.add('hidden'), 600);
+    const resolve = guideChoiceResolve;
+    guideChoiceResolve = null;
+    if (resolve) resolve(gender);
+  }
+
+  el.btnGuideMale.addEventListener('click', () => settleGuideChoice('male'));
+  el.btnGuideFemale.addEventListener('click', () => settleGuideChoice('female'));
+
   function closeSettings() {
     el.settingsPanel.classList.add('hidden');
     el.btnResetUnlocks.classList.remove('armed');
@@ -529,6 +551,25 @@ export function createHUD(handlers = {}) {
     hideTourSummary() {
       el.tourSummary.classList.remove('show');
       setTimeout(() => el.tourSummary.classList.add('hidden'), 600);
+    },
+
+    /** Ask which avatar should speak with the child's recorded voice. */
+    chooseGuideGender() {
+      if (guideChoiceResolve) settleGuideChoice(null);
+      clearTimeout(guideChoiceHideTimer);
+      el.guideChoice.classList.remove('hidden');
+      guideChoiceShowFrame = requestAnimationFrame(() => {
+        guideChoiceShowFrame = null;
+        el.guideChoice.classList.add('show');
+      });
+      return new Promise((resolve) => {
+        guideChoiceResolve = resolve;
+      });
+    },
+
+    /** Also settles the pending choice so an interrupted phase can unwind. */
+    hideGuideChoice() {
+      settleGuideChoice(null);
     },
 
     /** The relaxed end state: no more prompts, the town just runs. */

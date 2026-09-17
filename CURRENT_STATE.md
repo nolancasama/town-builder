@@ -35,7 +35,8 @@ round the town on foot, following the road graph on the sidewalk side. At each
 stop it presents the place using the child's own recordings, with a large
 speaking portrait cut-in lip-synced to the audio. Places skipped in phase 2 get
 only their build sentence — nothing is invented. Ends with applause, an aerial,
-and Explore Town / Play Again.
+and Explore Town / Play Again. Immediately before the tour, the child chooses a
+boy or girl guide; the matching world avatar and portrait are rebuilt together.
 
 **Voice capture.** `MediaRecorder` runs alongside recognition; only the accepted
 take is kept, per place and per sentence type. Verified end to end: capture →

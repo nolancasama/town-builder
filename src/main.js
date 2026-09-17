@@ -47,6 +47,8 @@ import { preloadCharacterModels } from './world/characterModels.js';
 
 const params = new URLSearchParams(location.search);
 const DEV = params.get('dev') === '1';
+const guideParam = params.get('guide');
+const GUIDE_GENDER_OVERRIDE = guideParam === 'male' || guideParam === 'female' ? guideParam : null;
 // Teacher overrides: ?city=Nara&owner=Yuki&target=6
 if (params.get('city')) {
   LESSON.city = params.get('city');
@@ -700,6 +702,11 @@ class Game {
     }
 
     await wait(0.5);
+    if (this.phase !== 'tour-summary') return;
+
+    const guideGender = GUIDE_GENDER_OVERRIDE || await this.hud.chooseGuideGender();
+    if (this.phase !== 'tour-summary' || !guideGender) return;
+    this.guidedTour.setGuideGender(guideGender);
     await this.startGuidedTour();
   }
 
@@ -809,6 +816,7 @@ class Game {
   playAgain() {
     this.unlockReveal.cancel();
     this.guidedTour.cancel();
+    this.hud.hideGuideChoice();
     this.hud.hideGuidedEnd();
     this.hud.enterGuidedMode(false);
     this.records.clear();

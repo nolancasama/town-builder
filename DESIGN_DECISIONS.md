@@ -283,3 +283,13 @@ The bake also gained a final `sanitize()` pass. `splitSharedEdges` inserts
 T-junction vertices after the polygons were last cleaned, which left 187 walk
 and 26 kerb polygons carrying exact duplicate neighbours that triangulate into
 degenerate faces. Both are now zero.
+
+## 2026-09-17 - The child chooses the guided-tour avatar
+
+The child chooses a boy or girl guide immediately before the guided tour because
+the guide speaks in the child's recorded voice. Boy guides use Kenney models b,
+k and m; girl guides use e and f. The choice is asked on every run rather than
+persisted because classroom devices are shared.
+
+The rejected alternative was a random guide: a boy's voice coming from a woman,
+or a girl's voice coming from a man, reads as strange.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { wait, Ease, damp } from '../core/tween.js';
 import { createPortrait } from './portrait.js';
-import { makeGuide, makeTourist, poseWalk, poseIdle, poseTalk, poseLook, posePoint, poseShoot, poseCheer, relax, closeMouth } from '../world/characters.js';
+import { guideSpec, makeGuide, makeTourist, poseWalk, poseIdle, poseTalk, poseLook, posePoint, poseShoot, poseCheer, relax, closeMouth } from '../world/characters.js';
 
 /**
  * PHASE 3 - THE GUIDED TOUR
@@ -27,11 +27,11 @@ export function createGuidedTour({
   root.visible = false;
   scene.add(root);
 
-  const guide = makeGuide(rng, null, { camera: rig.camera });
+  let guide = makeGuide(rng, guideSpec(rng, 'male'), { camera: rig.camera });
   root.add(guide);
 
   // the same person again, for the large speaking cut-in
-  const portrait = createPortrait({ rng, spec: guide.userData.spec });
+  let portrait = createPortrait({ rng, spec: guide.userData.spec });
 
   const tourists = [];
   const touristCount = rng.int(5, 7);
@@ -547,8 +547,27 @@ export function createGuidedTour({
 
   return {
     root,
-    guide,
+    get guide() {
+      return guide;
+    },
     tourists,
+
+    /** Rebuild both copies from one appearance so they stay the same person. */
+    setGuideGender(gender) {
+      const spec = guideSpec(rng, gender);
+      const nextGuide = makeGuide(rng, spec, { camera: rig.camera });
+      const nextPortrait = createPortrait({ rng, spec: nextGuide.userData.spec });
+
+      portrait.hide();
+      portrait.setLevel(0);
+      portrait.dispose();
+      root.remove(guide);
+
+      guide = nextGuide;
+      portrait = nextPortrait;
+      root.add(guide);
+      trail.length = 0;
+    },
 
     /** Decode every recording once, so playback never stutters mid-tour. */
     async prepare(stops) {
@@ -656,6 +675,8 @@ export function createGuidedTour({
       return portrait.render(renderer, width, height);
     },
 
-    portrait,
+    get portrait() {
+      return portrait;
+    },
   };
 }

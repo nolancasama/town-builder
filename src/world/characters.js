@@ -109,7 +109,10 @@ function addHair(g, rng, colour, forcedStyle = null) {
 
 /* Ordinary townspeople only - the child's own avatar is never one of the
  * costumed characters that wander the streets. */
-const GUIDE_MODELS = ['b', 'e', 'k', 'm'];
+const GUIDE_MODELS = {
+  male: ['b', 'k', 'm'],
+  female: ['e', 'f'],
+};
 
 /** Keep an accessory in real-world metres while parenting it to a rig bone. */
 function attachWorldSized(character, bone, accessory, offset) {
@@ -193,12 +196,16 @@ function addGuideAccessories(character, { mouth = false } = {}) {
  * shot - one strong uniform colour, a cap, a shoulder bag and a little raised
  * flag - but an ordinary friendly person, not a mascot.
  */
-export function guideSpec(rng) {
+export function guideSpec(rng, gender) {
+  const selectedGender = gender === 'female' ? 'female' : 'male';
   return {
-    model: rng.pick(GUIDE_MODELS),
+    gender: selectedGender,
+    model: rng.pick(GUIDE_MODELS[selectedGender]),
     skin: rng.pick(SKINS),
     hair: rng.pick(HAIRS),
-    hairStyle: rng.pick(['crop', 'bob', 'long', 'bun', 'ponytail']),
+    hairStyle: selectedGender === 'male'
+      ? 'crop'
+      : rng.pick(['bob', 'long', 'bun', 'ponytail']),
   };
 }
 
@@ -207,10 +214,12 @@ export function guideSpec(rng) {
  * two models of the same person, which is the whole point of the cut-in.
  */
 export function makeGuide(rng, spec = null, options = {}) {
-  const sourceLook = spec || guideSpec(rng);
+  const sourceLook = spec || guideSpec(rng, 'male');
+  const gender = sourceLook.gender === 'female' ? 'female' : 'male';
   const look = {
     ...sourceLook,
-    model: sourceLook.model || rng.pick(GUIDE_MODELS),
+    gender,
+    model: sourceLook.model || rng.pick(GUIDE_MODELS[gender]),
   };
   const uniform = 0x2f7f9e;
   const procedural = options.procedural === true;
