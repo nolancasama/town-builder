@@ -106,6 +106,17 @@ export const LANDMARKS = {
     activities: ['save money', 'change money'],
     celebration: 0.4, population: 3, vehicles: 1,
   },
+  // Community rather than shopping: a vet is a town service, like the
+  // hospital it echoes. 'bet clinic' is a common recogniser mishearing of
+  // "vet" in Japanese-accented English.
+  vet: {
+    displayName: 'VET CLINIC', spokenName: 'vet clinic', article: 'a', sign: 'VET CLINIC', icon: '🐶',
+    category: 'community', zones: ['civic', 'commercial'], sizeClass: 'small',
+    fallback: X.buildVetClinic, model: 'vet.glb',
+    keywords: ['vet clinic', 'vet', 'animal hospital', 'veterinary clinic', 'pet clinic', 'animal doctor', 'bet clinic'],
+    activities: ['help animals', 'see a vet', 'take care of pets'],
+    celebration: 0.5, population: 3, vehicles: 1,
+  },
 
   /* ================= TRANSPORTATION ================= */
   station: {
@@ -314,6 +325,35 @@ export const LANDMARKS = {
     fallback: X.buildBookstore, model: 'bookstore.glb',
     keywords: ['bookstore', 'book store', 'book shop', 'bookshop'],
     activities: ['buy books', 'read', 'buy comics'],
+    celebration: 0.4, population: 3, vehicles: 1,
+  },
+  // Shopping, alongside the other high-street shopfronts. The plain word
+  // 'restaurant' is deliberately NOT a keyword: the target noun is "sushi
+  // restaurant", and the ramen restaurant already owns the bare word.
+  sushiRestaurant: {
+    displayName: 'SUSHI RESTAURANT', spokenName: 'sushi restaurant', article: 'a', sign: 'SUSHI', icon: '🍣',
+    category: 'shopping', zones: ['commercial'], sizeClass: 'small',
+    fallback: X.buildSushiRestaurant, model: 'sushi-restaurant.glb',
+    keywords: ['sushi restaurant', 'sushi', 'sushi shop', 'sushi bar', 'susi', 'sushi restraunt'],
+    activities: ['eat sushi', 'have lunch', 'have dinner', 'eat fish'],
+    celebration: 0.5, population: 5, vehicles: 1,
+  },
+  // id stays `florist`, but the taught noun is the simpler "flower shop".
+  // 'flour shop' covers the homophone the recogniser often returns.
+  florist: {
+    displayName: 'FLOWER SHOP', spokenName: 'flower shop', article: 'a', sign: 'FLOWER SHOP', icon: '💐',
+    category: 'shopping', zones: ['commercial'], sizeClass: 'small',
+    fallback: X.buildFlowerShop, model: 'florist.glb',
+    keywords: ['flower shop', 'florist', 'flower store', 'flowers', 'flower', 'flour shop'],
+    activities: ['buy flowers', 'smell flowers', 'buy a bouquet'],
+    celebration: 0.4, population: 3, vehicles: 1,
+  },
+  hairSalon: {
+    displayName: 'HAIR SALON', spokenName: 'hair salon', article: 'a', sign: 'HAIR SALON', icon: '💇',
+    category: 'shopping', zones: ['commercial'], sizeClass: 'small',
+    fallback: X.buildHairSalon, model: 'hair-salon.glb',
+    keywords: ['hair salon', 'salon', 'hairdresser', 'barber', 'barber shop', 'beauty salon', 'hair shop', 'saloon'],
+    activities: ['get a haircut', 'cut hair', 'wash hair'],
     celebration: 0.4, population: 3, vehicles: 1,
   },
 

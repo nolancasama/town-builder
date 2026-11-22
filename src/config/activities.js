@@ -72,6 +72,30 @@ export const ACTIVITIES = {
         anim: 'crowd', opts: { count: 4, spot: 'entrance', mood: 'walk' } },
     ],
   },
+  // The vet model exposes exciteAnimal('dog' | 'cat' | null), so this reuses
+  // the zoo/farm 'animals' animation: the pets perk up, owners gather out front.
+  // "take my dog" is accepted although the frame makes it a little odd - the
+  // idea is right and the recogniser, not grammar, is what we forgive here.
+  //
+  // Fuzzy matching gives <=4-letter words one edit of slack, so "cat" would
+  // match the "can" in every sentence and "pet" would match "vet". Cat phrases
+  // therefore use "cats" (two edits from "can"; a child's "cat" still matches
+  // it), "pet a ___" is avoided, and the neutral `help` action comes first so
+  // ties wake both pets.
+  vet: {
+    preferred: 'help animals',
+    hints: ['help animals', 'see a vet'],
+    actions: [
+      { id: 'help', phrases: ['help animals', 'help pets', 'help dogs', 'help cats', 'see a vet', 'see the vet',
+        'meet a vet', 'see a doctor', 'take care of animals', 'take care of pets', 'see animals', 'see pets'],
+        anim: 'animals', opts: { animal: null, people: 3 } },
+      { id: 'dogs', phrases: ['see dogs', 'see a dog', 'take my dog', 'bring my dog', 'walk a dog',
+        'play with dogs', 'dogs'],
+        anim: 'animals', opts: { animal: 'dog', people: 3 } },
+      { id: 'cats', phrases: ['see cats', 'take my cats', 'bring my cats', 'play with cats', 'cats'],
+        anim: 'animals', opts: { animal: 'cat', people: 3 } },
+    ],
+  },
 
   /* ===================== TRANSPORT ===================== */
   station: {
@@ -356,6 +380,42 @@ export const ACTIVITIES = {
     actions: [
       { id: 'books', phrases: ['buy books', 'buy a book', 'read books', 'read', 'look at books', 'buy comics'],
         anim: 'crowd', opts: { count: 4, spot: 'entrance', mood: 'shop', prop: 'book' } },
+    ],
+  },
+  sushiRestaurant: {
+    preferred: 'eat sushi',
+    hints: ['eat sushi', 'have dinner'],
+    actions: [
+      { id: 'eat', phrases: ['eat sushi', 'eat fish', 'eat tuna', 'eat salmon', 'eat rice', 'eat',
+        'eat lunch', 'eat dinner', 'have lunch', 'have dinner', 'drink tea', 'drink green tea'],
+        anim: 'props', opts: { kind: 'tables', people: 4, sushi: true } },
+    ],
+  },
+  // Customers leave carrying bouquets (crowd prop 'flowers'); browsers linger
+  // by the outdoor display instead.
+  florist: {
+    preferred: 'buy flowers',
+    hints: ['buy flowers', 'smell flowers'],
+    actions: [
+      { id: 'buy', phrases: ['buy flowers', 'buy a flower', 'buy a bouquet', 'buy roses', 'buy a rose',
+        'get flowers', 'buy a present', 'buy a gift'],
+        anim: 'crowd', opts: { count: 4, spot: 'entrance', mood: 'shop', prop: 'flowers' } },
+      { id: 'look', phrases: ['see flowers', 'look at flowers', 'smell flowers', 'smell the flowers',
+        'see roses', 'water flowers', 'water the flowers', 'flowers'],
+        anim: 'crowd', opts: { count: 4, spot: 'front', mood: 'photo', prop: 'flowers' } },
+    ],
+  },
+  // "cut hair" also covers "get a hair cut", since matching is order-free on
+  // content words and the recogniser often splits "haircut" in two.
+  hairSalon: {
+    preferred: 'get a haircut',
+    hints: ['get a haircut', 'cut hair'],
+    actions: [
+      { id: 'haircut', phrases: ['get a haircut', 'have a haircut', 'haircut', 'cut hair', 'cut my hair',
+        'style hair', 'look cool', 'look nice'],
+        anim: 'crowd', opts: { count: 3, spot: 'entrance', mood: 'walk' } },
+      { id: 'wash', phrases: ['wash hair', 'wash my hair', 'dry hair', 'brush hair', 'comb hair'],
+        anim: 'crowd', opts: { count: 3, spot: 'front', mood: 'photo' } },
     ],
   },
 

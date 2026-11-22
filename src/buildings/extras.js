@@ -171,6 +171,264 @@ function addFaceWindow(group, { x = 0, y, z, w = 1.5, h = 1.2, material = mat(P.
 
 /* --------------------------- SHOPS AND FOOD --------------------------- */
 
+/** Bright salon: spinning barber pole, oversized comb and mirror/chair display. */
+export function buildHairSalon({ size, sign, rng }) {
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.5);
+  const d = Math.min(size[1] - 5, 7.6);
+  const h = 4.8;
+  const front = d / 2;
+  const pinkMat = mat(P.wallPink);
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), mat(P.wallWhite), { y: h / 2 }));
+  addFlatRoofFinish(g, { w, d, y: h, edge: P.wallPink });
+  addFaceWindow(g, { x: -1.35, y: 1.75, z: front + 0.02, w: 5.9, h: 2.7 });
+  g.add(mesh(box(1.3, 2.7, 0.16), pinkMat, { x: 3.25, y: 1.35, z: front + 0.06 }));
+  addFaceWindow(g, { x: 3.25, y: 1.8, z: front + 0.16, w: 0.9, h: 1.5 });
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2, w: 2.1, h: 1.5 });
+  }
+  addFaceWindow(g, { x: -1.7, y: 2, z: -front - 0.02, w: 2.3, h: 1.4 });
+  g.add(mesh(box(1, 2.1, 0.14), pinkMat, { x: 2.6, y: 1.05, z: -front - 0.03 }));
+  facadeSign(g, sign, { w: 4.3, h: 0.7, y: 4.1, z: front + 0.08, fg: '#935c85' });
+  // A pink belt course wraps all four walls so the sides and rear still read
+  // as the salon, and a rooftop unit keeps the flat roof from looking empty.
+  g.add(mesh(box(w + 0.08, 0.3, d + 0.08), pinkMat, { y: 3.45, cast: false }));
+  g.add(mesh(roundedBox(1.6, 0.8, 1.2, 0.12), mat(P.metal), { x: -2.4, y: h + 0.45, z: -1.2 }));
+  g.add(mesh(box(1.1, 0.08, 0.7), mat(P.metalDark), { x: -2.4, y: h + 0.88, z: -1.2, cast: false }));
+
+  // Display silhouettes sit in front of the opaque glass, like the bakery trays.
+  for (const x of [-2.9, -0.5]) {
+    g.add(mesh(roundedBox(1.15, 1.55, 0.12, 0.16), mat(P.metal), { x, y: 2.1, z: front + 0.15 }));
+    g.add(mesh(box(0.9, 1.25, 0.08), glow(0xe7f4fa, 0.2), { x, y: 2.1, z: front + 0.24 }));
+    g.add(mesh(cylinder(0.12, 0.2, 0.65, 8), mat(P.metalDark), { x, y: 0.5, z: front + 0.5 }));
+    g.add(mesh(roundedBox(1, 0.2, 0.75, 0.1), pinkMat, { x, y: 0.85, z: front + 0.5 }));
+    g.add(mesh(roundedBox(1, 0.8, 0.18, 0.1), pinkMat, { x, y: 1.25, z: front + 0.8 }));
+  }
+  const comb = new THREE.Group();
+  comb.position.set(-3.8, 4.15, front + 0.26);
+  comb.rotation.z = -0.22;
+  comb.add(mesh(box(1.6, 0.22, 0.16), mat(P.purple)));
+  for (let i = 0; i < 7; i++) {
+    comb.add(mesh(box(0.12, 0.5, 0.16), mat(P.purple), { x: -0.66 + i * 0.22, y: -0.3 }));
+  }
+  g.add(comb);
+
+  const pole = new THREE.Group();
+  pole.position.set(4.5, 1.9, front + 0.55);
+  pole.add(mesh(cylinder(0.24, 0.24, 1.9, 12), mat(P.wallWhite)));
+  // Stepped helical bands make rotation visible without textures.
+  for (let i = 0; i < 18; i++) {
+    for (const offset of [0, Math.PI]) {
+      const angle = i * 0.42 + offset;
+      pole.add(mesh(box(0.19, 0.13, 0.1), mat(offset ? P.blue : P.red), {
+        x: Math.sin(angle) * 0.24, y: -0.85 + i * 0.1,
+        z: Math.cos(angle) * 0.24, ry: angle, cast: false,
+      }));
+    }
+  }
+  g.add(pole);
+  for (const y of [0.85, 2.95]) {
+    g.add(mesh(sphere(0.32, 10, 6), mat(P.metal), { x: 4.5, y, z: front + 0.55 }));
+  }
+  g.userData.animate = (dt, time) => { pole.rotation.y = time * 1.8; };
+  addEntranceApproach(g, { x: 3.25, front, depth: 1.8 });
+  return g;
+}
+
+/** Mint pet clinic: large paw and green cross, with a lively dog and cat. */
+export function buildVetClinic({ size, sign, rng }) {
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.5);
+  const d = Math.min(size[1] - 5, 7.6);
+  const h = 4.8;
+  const front = d / 2;
+  const mintMat = mat(P.wallMint);
+  const greenMat = mat(P.green);
+  const roofMat = mat(P.roofTeal);
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), mat(P.wallWhite), { y: h / 2 }));
+  g.add(mesh(gableRoof(w + 0.9, 1.7, d + 0.8), roofMat, { y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 1.7, roofMat, type: 'gable' });
+  g.add(mesh(box(w + 0.1, 0.65, d + 0.1), mintMat, { y: 0.55 }));
+  for (const x of [-3.1, 3.1]) {
+    addFaceWindow(g, { x, y: 2, z: front + 0.02, w: 2.4, h: 1.8 });
+  }
+  g.add(mesh(box(1.5, 2.6, 0.16), mintMat, { y: 1.3, z: front + 0.06 }));
+  addFaceWindow(g, { y: 1.75, z: front + 0.16, w: 1.05, h: 1.4 });
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2.2, w: 2.2, h: 1.4 });
+  }
+  addFaceWindow(g, { x: -1.8, y: 2.1, z: -front - 0.02, w: 2.6, h: 1.4 });
+  g.add(mesh(box(1, 2.1, 0.14), mintMat, { x: 2.7, y: 1.05, z: -front - 0.03 }));
+  facadeSign(g, sign, { w: 4.3, h: 0.65, y: 3.95, z: front + 0.08, fg: '#368773' });
+  const pad = mesh(sphere(0.6, 10, 6), greenMat, { y: 5, z: front + 0.55 });
+  pad.scale.set(1.2, 0.8, 0.3);
+  g.add(pad);
+  for (const [x, y] of [[-0.75, 5.5], [-0.28, 5.85], [0.28, 5.85], [0.75, 5.5]]) {
+    const toe = mesh(sphere(0.25, 8, 6), greenMat, { x, y, z: front + 0.55 });
+    toe.scale.z = 0.5;
+    g.add(toe);
+  }
+  g.add(mesh(box(0.32, 1.2, 0.18), greenMat, { x: 3.65, y: 3.95, z: front + 0.18 }));
+  g.add(mesh(box(1.2, 0.32, 0.18), greenMat, { x: 3.65, y: 3.95, z: front + 0.18 }));
+
+  const animals = [];
+  for (const name of ['dog', 'cat']) {
+    const dog = name === 'dog';
+    const animal = new THREE.Group();
+    animal.position.set(dog ? -2.45 : 2.45, 0, front + 1.45);
+    const fur = mat(dog ? P.wood : P.orange);
+    animal.add(mesh(roundedBox(0.8, 0.65, 1.05, 0.18), fur, { y: 0.65 }));
+    animal.add(mesh(sphere(0.4, 8, 6), fur, { y: 1.18, z: 0.35 }));
+    animal.add(mesh(box(0.42, 0.26, 0.3), mat(P.cream), { y: 1.05, z: 0.68 }));
+    animal.add(mesh(sphere(0.08, 6, 4), mat(P.navy), { y: 1.14, z: 0.86 }));
+    for (const sx of [-1, 1]) {
+      animal.add(mesh(sphere(0.055, 6, 4), mat(P.navy), { x: sx * 0.19, y: 1.3, z: 0.69 }));
+      animal.add(mesh(dog ? box(0.2, 0.46, 0.22) : cylinder(0, 0.18, 0.38, 4), fur, {
+        x: sx * 0.31, y: dog ? 1.16 : 1.6, z: 0.3,
+      }));
+      for (const z of [-0.32, 0.32]) {
+        animal.add(mesh(box(0.2, 0.35, 0.23), fur, { x: sx * 0.27, y: 0.22, z }));
+      }
+    }
+    const tail = new THREE.Group();
+    tail.position.set(0, 0.8, -0.5);
+    const tip = mesh(cylinder(0.09, 0.12, dog ? 0.65 : 0.95, 6), fur, { y: dog ? 0.15 : 0.4, z: -0.15 });
+    tip.rotation.x = -0.5;
+    tail.add(tip);
+    animal.add(tail);
+    g.add(animal);
+    animals.push({ name, model: animal, tail, phase: rng.range(0, Math.PI * 2), busy: 0 });
+  }
+  g.userData.exciteAnimal = (animal) => {
+    for (const pet of animals) {
+      if (animal == null || pet.name === animal) pet.busy = 6;
+    }
+  };
+  g.userData.animate = (dt, time) => {
+    for (let i = 0; i < animals.length; i++) {
+      const pet = animals[i];
+      pet.busy = Math.max(0, pet.busy - dt);
+      const active = pet.busy > 0;
+      pet.model.position.y = Math.abs(Math.sin(time * (active ? 5 : 1.3) + pet.phase)) * (active ? 0.32 : 0.025);
+      pet.tail.rotation.z = Math.sin(time * (active ? 11 : 2) + pet.phase) * (active ? 0.65 : 0.12);
+    }
+  };
+  addEntranceApproach(g, { front, depth: 2 });
+  return g;
+}
+
+/** Flower shop: striped awning, tiered bloom buckets and planted window box. */
+export function buildFlowerShop({ size, sign, rng }) {
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.5);
+  const d = Math.min(size[1] - 5, 7.6);
+  const h = 4.6;
+  const front = d / 2;
+  const roofMat = mat(P.roofTeal);
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), mat(P.wallPink), { y: h / 2 }));
+  g.add(mesh(gableRoof(w + 0.9, 1.8, d + 0.8), roofMat, { y: h }));
+  addPitchedRoofFinish(g, { w, d, y: h, roofHeight: 1.8, roofMat, type: 'gable' });
+  addFaceWindow(g, { x: -1.3, y: 1.9, z: front + 0.02, w: 5.6, h: 2.1 });
+  g.add(mesh(box(1.25, 2.5, 0.16), roofMat, { x: 3.4, y: 1.25, z: front + 0.05 }));
+  for (const sx of [-1, 1]) {
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2.2, w: 2, h: 1.5 });
+  }
+  addFaceWindow(g, { x: -1.5, y: 2, z: -front - 0.02, w: 2.4, h: 1.3 });
+  g.add(mesh(box(1, 2.1, 0.14), roofMat, { x: 2.7, y: 1.05, z: -front - 0.03 }));
+  facadeSign(g, sign, { w: 4.8, h: 0.7, y: 3.95, z: front + 0.08, fg: '#397d64' });
+  const colors = [P.red, P.yellow, P.purple, P.wallWhite];
+  for (let i = 0; i < 8; i++) {
+    const shade = mesh(box(0.85, 0.14, 1.5), mat(i % 2 ? P.cream : P.green), {
+      x: -4.2 + i * 0.85, y: 3.2, z: front + 0.7,
+    });
+    shade.rotation.x = -0.18;
+    g.add(shade);
+    g.add(mesh(box(0.85, 0.25, 0.12), mat(i % 2 ? P.cream : P.green), {
+      x: -4.2 + i * 0.85, y: 2.96, z: front + 1.44,
+    }));
+  }
+  // Repeated low-poly blooms share four materials, stems and bucket geometry.
+  const bouquet = (x, y, z, color) => {
+    g.add(mesh(cylinder(0.27, 0.2, 0.4, 8), mat(P.cream), { x, y: y + 0.2, z }));
+    for (let i = 0; i < 3; i++) {
+      const xx = x + (i - 1) * 0.2;
+      const yy = y + 0.75 + (i % 2) * 0.18;
+      g.add(mesh(cylinder(0.035, 0.035, 0.55, 5), mat(P.leaf), { x: xx, y: yy - 0.25, z }));
+      g.add(mesh(sphere(0.23, 7, 5), mat(color), { x: xx, y: yy, z }));
+    }
+  };
+  for (let tier = 0; tier < 2; tier++) {
+    const z = front + 1.75 - tier * 0.65;
+    const y = 0.22 + tier * 0.65;
+    g.add(mesh(box(4.9, 0.2, 0.65), mat(P.wood), { x: -1.65, y, z }));
+    for (let i = 0; i < 4; i++) bouquet(-3.45 + i * 1.15, y + 0.1, z, colors[i]);
+  }
+  g.add(mesh(box(4.8, 0.38, 0.5), mat(P.wood), { x: -1.3, y: 0.85, z: front + 0.3 }));
+  g.add(mesh(box(4.5, 0.16, 0.42), mat(P.leaf), { x: -1.3, y: 1.1, z: front + 0.3 }));
+  for (let i = 0; i < 5; i++) {
+    g.add(mesh(sphere(0.23, 7, 5), mat(colors[i % 4]), { x: -3.1 + i * 0.9, y: 1.3, z: front + 0.35 }));
+  }
+  for (let i = 0; i < 3; i++) bouquet(-w / 2 - 0.6, 0, -1.2 + i * 1.2, colors[i]);
+  addEntranceApproach(g, { x: 3.4, front, depth: 2 });
+  return g;
+}
+
+/** Sushi bar: timber frame, wide counter, indigo noren and giant salmon nigiri. */
+export function buildSushiRestaurant({ size, sign, rng }) {
+  const g = new THREE.Group();
+  const w = Math.min(size[0] - 4, 10.5);
+  const d = Math.min(size[1] - 5, 7.8);
+  const h = 4.6;
+  const front = d / 2;
+  const timberMat = mat(0x53483e);
+  const navyMat = mat(P.navy);
+  addBuildingPlinth(g, w, d);
+  g.add(mesh(box(w, h, d), mat(P.wallWhite), { y: h / 2 }));
+  addFlatRoofFinish(g, { w, d, y: h, edge: 0x53483e });
+  // Low, broad eaves and wraparound timber distinguish it from the ramen roof.
+  g.add(mesh(box(w + 0.9, 0.24, d + 0.9), timberMat, { y: h + 0.45 }));
+  g.add(mesh(box(w + 0.1, 0.7, d + 0.1), timberMat, { y: 0.55 }));
+  for (const sx of [-1, 1]) {
+    for (const z of [-front, front]) {
+      g.add(mesh(box(0.24, h, 0.24), timberMat, { x: sx * (w / 2 - 0.12), y: h / 2, z }));
+    }
+    addSideWindow(g, { x: sx * (w / 2 + 0.02), y: 2.1, w: 2.5, h: 1.4 });
+  }
+  addFaceWindow(g, { x: -1.5, y: 2, z: front + 0.02, w: 5.5, h: 2.1 });
+  addFaceWindow(g, { x: -1.5, y: 2, z: -front - 0.02, w: 3, h: 1.4 });
+  g.add(mesh(box(1, 2.1, 0.14), timberMat, { x: 2.8, y: 1.05, z: -front - 0.03 }));
+  g.add(mesh(box(1.6, 2.6, 0.18), timberMat, { x: 3.25, y: 1.3, z: front + 0.06 }));
+  for (let i = 0; i < 3; i++) {
+    g.add(mesh(box(0.58, 0.65, 0.12), navyMat, { x: 2.62 + i * 0.63, y: 2.65, z: front + 0.24 }));
+  }
+  g.add(mesh(box(5.5, 0.18, 0.65), mat(P.wood), { x: -1.5, y: 1.3, z: front + 0.3 }));
+  for (let i = 0; i < 4; i++) {
+    const x = -3.35 + i * 1.2;
+    g.add(mesh(box(0.85, 0.08, 0.46), timberMat, { x, y: 1.43, z: front + 0.35 }));
+    g.add(mesh(roundedBox(0.5, 0.22, 0.3, 0.08), mat(P.cream), { x, y: 1.57, z: front + 0.35 }));
+    g.add(mesh(roundedBox(0.58, 0.12, 0.32, 0.05), mat(P.orange), { x, y: 1.74, z: front + 0.35 }));
+  }
+  facadeSign(g, sign, { w: 3.8, h: 0.65, y: 3.85, z: front + 0.08, fg: '#39557a' });
+  g.add(mesh(roundedBox(3, 0.85, 1.2, 0.25), mat(P.cream), { x: -1.6, y: 5.5, z: 0.25 }));
+  g.add(mesh(roundedBox(3.35, 0.45, 1.35, 0.18), mat(P.orange), { x: -1.6, y: 6.05, z: 0.25 }));
+  for (let i = 0; i < 5; i++) {
+    const score = mesh(box(0.1, 0.035, 1.1), mat(P.cream), { x: -2.8 + i * 0.6, y: 6.29, z: 0.25 });
+    score.rotation.y = -0.25;
+    g.add(score);
+  }
+  for (const x of [-4.6, 4.6]) {
+    g.add(mesh(box(0.7, 0.95, 0.65), glow(0xffd9a0, 0.5), { x, y: 2.95, z: front + 0.55 }));
+    for (const y of [2.45, 3.45]) {
+      g.add(mesh(box(0.8, 0.12, 0.75), timberMat, { x, y, z: front + 0.55 }));
+    }
+  }
+  addEntranceApproach(g, { x: 3.25, front, depth: 1.8 });
+  return g;
+}
+
 export function buildBakery({ size, sign, rng }) {
   const g = new THREE.Group();
   const w = Math.min(size[0] - 4, 10.5);

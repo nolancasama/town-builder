@@ -19,6 +19,11 @@ export const DEFAULT_UNLOCKED = [
   'supermarket', 'convenience', 'restaurant', 'cafe', 'bakery', 'bookstore',
   'hotel', 'house',
 ];
+// The hair salon, vet clinic, flower shop and sushi restaurant (added
+// 2026-11) are everyday places but deliberately start LOCKED: town #1 already
+// has 20 places, and classes that have played before get four genuinely new
+// discoveries instead of silently finding them in the default pool. Saved
+// unlock records never mention them, so existing players see them as locked.
 
 /** Mystery silhouettes appear this many times across one full run, at most. */
 export const MYSTERY_APPEARANCES_MIN = 2;

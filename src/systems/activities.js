@@ -129,7 +129,18 @@ export function createActivityDirector({ rng, particles, audio, pedestrians, cam
             y: 1.15, z: 0.32, cast: false, receive: false,
           }));
         }
-        if (opts.mood === 'shop') {
+        if (opts.prop === 'flowers') {
+          // a small bouquet: green wrap cone with three blooms on top
+          const bouquet = new THREE.Group();
+          bouquet.position.set(0.4, 0.95, 0.22);
+          bouquet.add(mesh(cylinder(0.14, 0.04, 0.42, 6), mat(0x7fc97a), { y: 0.1, cast: false, receive: false }));
+          for (const [bx, bz] of [[-0.08, 0], [0.08, 0.02], [0, -0.08]]) {
+            bouquet.add(mesh(sphere(0.1, 6, 5), mat(rng.pick([0xff6f91, 0xffd166, 0xffffff, 0xc77dff])), {
+              x: bx, y: 0.36, z: bz, cast: false, receive: false,
+            }));
+          }
+          person.add(bouquet);
+        } else if (opts.mood === 'shop') {
           person.add(mesh(box(0.34, 0.42, 0.22), mat(rng.pick([0xffffff, 0xffd166, 0xef7d57])), {
             x: 0.42, y: 0.85, cast: false, receive: false,
           }));
@@ -636,6 +647,15 @@ export function createActivityDirector({ rng, particles, audio, pedestrians, cam
           const x = (i - 1) * 2.6;
           group.add(mesh(cylinder(0.75, 0.75, 0.12, 12), mat(0xffffff), { x, y: 0.95, cast: false }));
           group.add(mesh(cylinder(0.12, 0.16, 0.95, 8), mat(P.metalDark), { x, y: 0.48, cast: false }));
+          if (opts.sushi) {
+            // a wooden geta board with two nigiri: rice block, salmon / tuna top
+            group.add(mesh(box(0.7, 0.06, 0.32), mat(P.wood), { x, y: 1.04, z: 0.2, cast: false }));
+            for (const [nx, top] of [[-0.16, 0xff8a5b], [0.16, 0xd94a4a]]) {
+              group.add(mesh(box(0.22, 0.1, 0.14), mat(0xfaf7ef), { x: x + nx, y: 1.12, z: 0.2, cast: false }));
+              group.add(mesh(box(0.24, 0.04, 0.16), mat(top), { x: x + nx, y: 1.19, z: 0.2, cast: false }));
+            }
+            continue;
+          }
           group.add(mesh(cylinder(0.26, 0.22, 0.14, 10), mat(opts.cafe ? 0x8a5a3c : 0xffd166), {
             x, y: 1.08, z: 0.2, cast: false,
           }));

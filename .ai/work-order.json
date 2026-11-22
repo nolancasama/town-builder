@@ -1,45 +1,38 @@
 {
-  "task": "Replace the runtime sidewalk solver with baked, committed sidewalk polygon data generated once from the hand-authored road network",
-  "context": "Matsubara Town's road network is hand-authored constant data: ROAD_SEGMENTS in src/config/town.js is a literal array of 41 segments, and it never changes at runtime. The sidewalk geometry is therefore a pure function of a constant, but createRoads() currently re-derives it on every load with an O(edges^2) clearance search that retreats each walk from its junctions. That solver leaves the pavement broken at every junction: 155 of 164 walk ends stop short, 334.8 units of pavement missing, worst gap 13.75. An attempt to close the corners with radially-sampled ribbons failed three ways (chords cutting across a carriageway, per-quad boxes z-fighting into visible combs, 9 of 82 corners never emitted) and has been reverted. The decision is to stop solving a fixed layout at runtime and bake the geometry instead.",
+  "task": "Add four procedural fallback landmark builders to src/buildings/extras.js: buildHairSalon, buildVetClinic, buildFlowerShop, buildSushiRestaurant. The registry entries in src/config/landmarks.js already reference these exact export names (X.buildHairSalon, X.buildVetClinic, X.buildFlowerShop, X.buildSushiRestaurant), so the build is currently broken until they exist.",
   "requirements": [
-    "Add scripts/bake-sidewalks.mjs which imports ROAD_SEGMENTS and ROAD_WIDTH from src/config/town.js, builds the road graph the same way src/world/graph.js does, computes the complete sidewalk and kerb geometry, and writes src/config/sidewalks.js. Add an npm script `bake:sidewalks` for it.",
-    "Compute each corner ANALYTICALLY as a miter joint between two offset strips, not by sampling. A road's kerb line is its centreline offset by width/2; its outer line is offset by width/2 + sidewalk width. For a pair of angularly adjacent edges at a node, the corner fill is the polygon bounded by both kerb lines and both outer lines; each straight strip runs up to the neighbouring road's kerb line. Bevel the outer vertex when an acute angle makes the miter spike longer than 3x the sidewalk width.",
-    "Every emitted polygon must be clear of EVERY carriageway, including roads not incident to the node it sits at - clip against those too. A stub edge swallowed by its junctions must still end up with continuous pavement across it.",
-    "src/config/sidewalks.js must be plain committed data a person can read and hand-edit, in exactly this frozen format: `export const SIDEWALK_SOURCE_HASH = '<hex>';` (a hash over ROAD_SEGMENTS and ROAD_WIDTH), `export const WALK_POLYGONS = [ [[x,z],[x,z],...], ... ];` and `export const KERB_POLYGONS = [ [[x,z],...], ... ];`. Coordinates rounded to 3 decimals, one polygon per line, so the file diffs cleanly in git.",
-    "createRoads() in src/world/roads.js must draw the sidewalks and kerbs from that committed data only. Delete the runtime clearance search, the retreat loop and the per-edge walk/kerb slab emission it feeds. Carriageways, the junction asphalt discs, zebra crossings, centre lines and createLotSidewalk() stay exactly as they are.",
-    "Build each polygon as ONE extruded prism - a single top face at the existing WALK_TOP (kerbs at WALK_TOP + 0.03) with vertical faces only around its outer perimeter. No internal faces between neighbouring pieces: coincident coplanar faces are what produced the z-fighting combs last time.",
-    "Add a staleness guard: at load, hash ROAD_SEGMENTS and ROAD_WIDTH the same way the bake script does and compare against SIDEWALK_SOURCE_HASH. On mismatch, log a clear console error naming the `npm run bake:sidewalks` fix. It must fail loudly rather than silently drawing stale pavement.",
-    "Update .ai/audit-sidewalk-gaps.mjs to audit the baked result: it must report 0 unpaved corners of 82, 0 carriageway intrusions, and 0 hash staleness, and exit non-zero if any of those fail."
+    "Signature and conventions identical to the existing small shop builders (buildBakery, buildCafe, buildRestaurant, buildBookstore): `export function buildX({ size, sign, rng })`, returns a THREE.Group, origin on the ground at lot centre, entrance facing local +Z. Use the shared helpers already in the file (addBuildingPlinth, addPitchedRoofFinish, addFaceWindow, addSideWindow, addEntranceApproach, facadeSign, shared PALETTE / mat / glow / box / cylinder / sphere / roundedBox / mesh). Every building must read on all four sides, like the eight vocabulary-first shops (DESIGN_DECISIONS.md / CURRENT_STATE.md 'Toy-town buildings').",
+    "All four are sizeClass 'small': footprint envelope is [16, 14]. Clamp body size the way buildBakery does (w = Math.min(size[0]-4, ~10.5), d = Math.min(size[1]-5, ~8)); everything incl. props/awnings must stay inside the envelope.",
+    "Each must be identifiable WITHOUT its sign through 2+ signature forms (vocabulary-first). Stylized, cheerful, lightweight, same tone as the bakery/cafe/restaurant.",
+    "buildHairSalon: bright clean facade, large glass storefront, a striped red/white/blue barber pole beside the door that spins via g.userData.animate(dt, time) (same animate convention used elsewhere in the file), a scissors or comb motif sculpted on the facade, a mirror/chair silhouette visible through the window if cheap.",
+    "buildVetClinic: clean clinic facade (white/mint), a big paw-print motif (pad + four toes) and a small green cross, a simple procedural dog and cat by the entrance (box/sphere figures). Expose g.userData.exciteAnimal = (animal) => {...} where animal is 'dog' | 'cat' | null (null = both): the named animal(s) become lively for ~6s (dog bounces / tail wags, cat hops / tail swishes), driven from g.userData.animate. Mirror how buildZoo/buildFarm implement exciteAnimal + animate (src/systems/activities.js `animals` animation calls model.userData.exciteAnimal(opts.animal) every 4s). Animals idle gently when not excited.",
+    "buildFlowerShop: colourful striped awning, outdoor tiered flower display with buckets/planters of multicoloured blooms (spheres) along the front, a window box, greenery; flowers on at least one side too. Keep mesh count modest (reuse geometry/materials, no per-flower unique materials).",
+    "buildSushiRestaurant: Japanese restaurant front distinct from the existing ramen buildRestaurant (which already has a red hip roof, noren and lanterns): use e.g. dark timber + white plaster walls, a short noren in indigo/navy, a sculpted nigiri or fish shape on the facade or a sushi-counter vibe visible through a wide window, warm glow lanterns (glow material). Must not look like a recolour of buildRestaurant.",
+    "Add the four builders in the 'SHOPS AND FOOD' section (vet near the civic builders is also fine), with a short comment per builder naming its signature cues, matching existing comment style.",
+    "Append a short line to the 2026-11-22 entry at the end of DESIGN_DECISIONS.md naming the signature cues chosen for each of the four buildings. Do not edit other entries."
   ],
   "constraints": [
-    "Do not touch pedestrian routing (systems/pedestrians.js), the road graph (world/graph.js), vehicles, landmarks, or lot code. src/config/town.js is READ-ONLY - do not edit the road network to make the geometry easier.",
-    "No pavement may lie on a carriageway at any point along a polygon edge, not merely at its vertices. This is the regression the old retreat rule existed to prevent.",
-    "The painted zebra crossings on junction approaches (at maxW/2 + 1.8 from the node) must stay visible on asphalt - pavement must not cover them.",
-    "Draw calls must not increase: everything still merges via mergeInto() into the existing 'sidewalks' and 'kerbs' meshes. No per-frame work is added - the runtime only reads data and builds static geometry once.",
-    "Keep the total triangle count for sidewalks and kerbs in the same order as before; an analytic miter should need far fewer triangles than the reverted sampled version.",
-    "Do not inline code into shell commands (no `node -e`). Use the declared npm scripts.",
-    "Record the decision in DESIGN_DECISIONS.md: baked committed geometry replacing a runtime solver for a fixed hand-authored layout, why (the solver kept producing junction defects on a layout that never changes), and the staleness guard that makes hard-coded data safe."
+    "Edit only src/buildings/extras.js and DESIGN_DECISIONS.md. Do not touch src/config/*, src/systems/*, or other builders.",
+    "No new dependencies, no textures/external assets (school networks block downloads); geometry and shared materials only.",
+    "No per-frame allocations in animate functions.",
+    "Edit source with structured edit tools, not shell/python rewrites; the first quoting/escaping failure ends shell-based editing.",
+    "Read DESIGN_DECISIONS.md sections on building footprints / toy-town buildings before editing."
   ],
   "startingPoints": [
-    "src/world/roads.js",
-    "src/world/graph.js",
-    "src/config/town.js",
-    ".ai/audit-sidewalk-gaps.mjs",
+    "src/buildings/extras.js",
+    "src/config/landmarks.js",
+    "src/systems/activities.js",
     "DESIGN_DECISIONS.md"
   ],
-  "validation": [
-    "npm run bake:sidewalks",
-    "npm run build",
-    "npm run audit:sidewalks"
-  ],
-  "notes": "The audit needs a preview server: `npm run build`, then `npx vite preview --port 4177 --strictPort` in the background, then `npm run audit:sidewalks`. It drives the live game with Playwright against Chrome at 'C:/Program Files/Google/Chrome/Application/chrome.exe' and reads window.game.world.graph under ?dev=1. Current audit baseline on the reverted code: unpavedCornerCount 9 of 82 was the best the sampled attempt reached; the straight-run metrics gapCount 155 / totalMissingMetres 334.8 describe the retreat and are expected to become meaningless once walks run to the kerb lines - replace them with the corner/intrusion/staleness checks rather than preserving them. Also re-run `node .ai/verify-pedestrian-flow.mjs dist` and confirm it still passes. Capture a fresh top-down to qa-evidence/sidewalk-baked-topdown.png: corners must read as smooth flat pavement with no ridges, combs or stripes.",
-  "category": "3d-geometry",
-  "complexity": "hard",
+  "validation": ["npm run build"],
+  "behavioralAcceptance": {
+    "owner": "controller",
+    "description": "Controller renders each of the four buildings in the live town and judges silhouettes visually."
+  },
+  "category": "3d-procedural",
+  "complexity": "medium",
   "bounded": true,
   "exploration": "local",
-  "risk": "high",
-  "expectedCost": "medium",
-  "executionStyle": "deep-reasoning",
-  "composition": "atomic",
-  "priorFailure": "approach"
+  "risk": "low",
+  "expectedCost": "medium"
 }

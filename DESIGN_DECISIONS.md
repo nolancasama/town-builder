@@ -293,3 +293,30 @@ persisted because classroom devices are shared.
 
 The rejected alternative was a random guide: a boy's voice coming from a woman,
 or a girl's voice coming from a man, reads as strange.
+
+## 2026-11-22 - Hair salon, vet clinic, flower shop and sushi restaurant
+
+Four everyday places join the pool (33 -> 37 active): `hairSalon`, `vet`,
+`florist` (taught noun "flower shop") and `sushiRestaurant`. The vet is
+`community` (a town service, like the hospital); the other three are
+`shopping`. Category balance needs no change: choices already take at most one
+card per category per round.
+
+- **All four start locked.** Town #1 already has 20 places, and classes that
+  have played before get four new discoveries rather than finding them silently
+  in the default pool. Rejected: adding them to `DEFAULT_UNLOCKED` as
+  "everyday" places.
+- **No bare `restaurant` keyword for the sushi restaurant.** The ramen
+  restaurant owns that word, and the lesson target is "sushi restaurant".
+  "sushi" alone is still accepted.
+- **Recogniser homophones are keywords:** "bet clinic", "flour shop",
+  "saloon". "cut hair" covers "get a hair cut" because matching ignores word order.
+- **Vet phrases fit the "We can ___ in the vet clinic" frame**: "help animals",
+  "see dogs", "take care of pets". The suggested "take a dog" alone was
+  rejected; "take my dog" is accepted but not taught.
+- **Phase 3 reuses existing animations**: no new animation system. The vet
+  exposes `exciteAnimal('dog'|'cat'|null)` for the zoo/farm `animals` animation;
+  florist customers carry a crowd `prop: 'flowers'` bouquet; the sushi
+  restaurant's `tables` props carry nigiri boards (`sushi: true`); the salon's
+  barber pole spins as ambient motion.
+- **Procedural signature cues:** salon spinning barber pole and comb with chair/mirror display; vet paw and green cross with dog/cat figures; flower shop striped awning, tiered bloom buckets and window box; sushi bar dark timber counter, indigo noren and oversized salmon nigiri.

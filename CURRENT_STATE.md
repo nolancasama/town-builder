@@ -17,7 +17,7 @@ English lesson nodes carry an English language hint for assistive technology.
 Long Japanese statuses, modal widths and the small-screen tour header have
 defensive wrapping and spacing so the translated chrome stays inside its chips.
 
-**Phase 1 — build the town.** Three building cards per round from a pool of 33
+**Phase 1 — build the town.** Three building cards per round from a pool of 37
 places across six categories, chosen to differ in category. The child taps one,
 says *"We have a ___ in Matsubara."*, and it is built with a camera fly-in,
 dust, foundation drop, rise and settle. 10 landmarks completes the town
@@ -25,7 +25,7 @@ dust, foundation drop, rise and settle. 10 landmarks completes the town
 each build.
 
 **Phase 2 — the speaking tour.** The camera visits each built place and asks
-what people can do there. Semi-free production: ~335 accepted phrases across the
+what people can do there. Semi-free production: ~400 accepted phrases across the
 pool, matched on content words with fuzzy spelling. `visited` and
 `spokenSuccessfully` are tracked separately; Skip always available; the summary
 offers Continue (revisits only unspoken places) or the guided tour.
@@ -44,9 +44,9 @@ store → decode → amplitude-driven playback.
 
 **World.** Hand-placed road network with sidewalks and crossings, 17 zone-tagged
 landmark lots, procedural houses/shops/trees/paddies, 8 original hand-built
-landmarks plus 26 procedural ones, GLB drop-in replacement per landmark.
+landmarks plus 30 procedural ones, GLB drop-in replacement per landmark.
 Building footprints and parcels are standardized into four size classes
-(small/medium/large/xl) centralized in `config/town.js`; all 33 active
+(small/medium/large/xl) centralized in `config/town.js`; all 37 active
 landmarks measure inside their envelopes, and `LOT_EXCLUSIONS`,
 `excludedTypes` and `minLotSize` were deleted in favour of independent
 class/zone/occupancy checks. Live: 41 road segments, 37 houses and shops,
@@ -85,8 +85,8 @@ p95), versus 3.47 FPS, 110,906 triangles and 476 calls with character rendering
 and updates disabled. These software-rendered numbers are recorded for relative
 comparison, not as a Chromebook estimate.
 
-**Building progression.** 20 of the 33 active places are unlocked from the
-first playthrough; 13 start locked and are discovered through play, not
+**Building progression.** 20 of the 37 active places are unlocked from the
+first playthrough; 17 start locked (including the hair salon, vet clinic, flower shop and sushi restaurant added 2026-11-22) and are discovered through play, not
 purchased with any score. 2–3 rounds per game show a locked silhouette card
 (the real building's icon, darkened) as a non-selectable teaser; it never
 drops the round below two real choices. Finishing all three phases unlocks
@@ -232,6 +232,11 @@ agent's per-frame displacement against that agent's own speed.
 
 ## Known gaps
 
+- **"eat" fuzzily matches "at" in the phase-2 matcher.** Words of four letters
+  or fewer get one edit of slack, so "eat" ≈ "at" and "cat" ≈ "can". "We can
+  swim at the restaurant" is accepted at the restaurant, and "eat sushi" is
+  satisfied by "at the sushi restaurant". Pre-existing; the fix belongs in
+  `speech.js` (e.g. exact matching for short words), not in phrase banks.
 - **Real-voice lip sync is unverified.** Capture and playback were tested with
   Chromium's synthetic microphone; how the mouth reads against actual child
   speech has not been observed.
